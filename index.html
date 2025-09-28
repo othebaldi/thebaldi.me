@@ -32,7 +32,8 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         function navigateTo(page) {
-            window.location.href = page;
+            // Corrigido: usando pathname para navegação relativa no ambiente de preview.
+            window.location.pathname = page;
         }
 
         async function checkUserStatus() {
