@@ -72,6 +72,10 @@
             max-height: 80vh;
             overflow-y: auto;
         }
+        .tab-btn.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+        }
     </style>
 </head>
 <body class="admin-bg">
@@ -133,8 +137,8 @@
                 </div>
             </div>
 
-            <!-- Painel Administrativo Simplificado -->
-            <div id="adminPanel" class="hidden admin-panel max-w-4xl w-full p-8 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <!-- Painel Administrativo -->
+            <div id="adminPanel" class="hidden admin-panel max-w-6xl w-full p-8 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
                 <!-- Header -->
                 <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-200">
                     <div class="flex items-center">
@@ -145,7 +149,7 @@
                         </div>
                         <div>
                             <h1 class="text-3xl font-bold text-gray-800">Painel Admin</h1>
-                            <p class="text-green-600 font-semibold">Acesso autorizado</p>
+                            <p class="text-green-600 font-semibold">Acesso autorizado: <span id="currentAdminEmail"></span></p>
                         </div>
                     </div>
                     <button id="adminLogout" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium">
@@ -153,46 +157,166 @@
                     </button>
                 </div>
 
-                <!-- Adicionar Usuário -->
-                <div class="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg config-section">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Adicionar Novo Cliente</h2>
-                    <form id="addUserForm" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="userEmail" class="block text-sm font-medium text-gray-700 mb-2">E-mail do Cliente</label>
-                                <input type="email" id="userEmail" required 
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
-                                       placeholder="cliente@email.com">
-                            </div>
-                            <div>
-                                <label for="initialPassword" class="block text-sm font-medium text-gray-700 mb-2">Senha Inicial</label>
-                                <div class="relative">
-                                    <input type="text" id="initialPassword" required 
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white pr-20" 
-                                           placeholder="123456">
-                                    <button type="button" id="generatePassword" 
-                                            class="absolute right-2 top-2 px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded">Gerar</button>
+                <!-- Tabs Navigation -->
+                <div class="mb-8">
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-8">
+                            <button class="tab-btn active py-2 px-1 font-medium text-sm" data-tab="users">Gerenciar Usuários</button>
+                            <button class="tab-btn py-2 px-1 font-medium text-sm text-gray-500" data-tab="admin-settings">Configurações Admin</button>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Tab: Gerenciar Usuários -->
+                <div id="users" class="tab-content">
+                    <!-- Adicionar Usuário -->
+                    <div class="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg config-section">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Adicionar Novo Cliente</h2>
+                        <form id="addUserForm" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="userEmail" class="block text-sm font-medium text-gray-700 mb-2">E-mail do Cliente</label>
+                                    <input type="email" id="userEmail" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
+                                           placeholder="cliente@email.com">
+                                </div>
+                                <div>
+                                    <label for="userName" class="block text-sm font-medium text-gray-700 mb-2">Nome do Cliente</label>
+                                    <input type="text" id="userName" 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
+                                           placeholder="Nome completo">
+                                </div>
+                                <div>
+                                    <label for="initialPassword" class="block text-sm font-medium text-gray-700 mb-2">Senha Inicial</label>
+                                    <div class="relative">
+                                        <input type="text" id="initialPassword" required 
+                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white pr-20" 
+                                               placeholder="123456">
+                                        <button type="button" id="generatePassword" 
+                                                class="absolute right-2 top-2 px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded">Gerar</button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Adicionar Cliente</button>
-                    </form>
-                </div>
-                
-                <!-- Lista de Usuários -->
-                <div class="bg-white border border-gray-200 rounded-lg config-section">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-xl font-semibold text-gray-800">Clientes Cadastrados <span id="totalUsersCount">0</span></h2>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Adicionar Cliente</button>
+                        </form>
                     </div>
-                    <div class="p-6">
-                        <div id="usersList" class="space-y-3">
-                            <p class="text-gray-500 text-center py-8">Carregando clientes...</p>
+                    
+                    <!-- Lista de Usuários -->
+                    <div class="bg-white border border-gray-200 rounded-lg config-section">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-800">Clientes Cadastrados <span id="totalUsersCount">0</span></h2>
+                        </div>
+                        <div class="p-6">
+                            <div id="usersList" class="space-y-3">
+                                <p class="text-gray-500 text-center py-8">Carregando clientes...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Configurações Admin -->
+                <div id="admin-settings" class="tab-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Alterar dados do Admin -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-6 config-section">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Alterar Dados do Administrador</h2>
+                            <form id="changeAdminForm" class="space-y-4">
+                                <div>
+                                    <label for="newAdminEmail" class="block text-sm font-medium text-gray-700 mb-2">Novo E-mail Admin</label>
+                                    <input type="email" id="newAdminEmail" 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                                           placeholder="novo.email@admin.com">
+                                </div>
+                                <div>
+                                    <label for="currentAdminPassword" class="block text-sm font-medium text-gray-700 mb-2">Senha Atual</label>
+                                    <input type="password" id="currentAdminPassword" required
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label for="newAdminPassword" class="block text-sm font-medium text-gray-700 mb-2">Nova Senha (opcional)</label>
+                                    <input type="password" id="newAdminPassword" minlength="6"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                           placeholder="Deixe em branco para manter a atual">
+                                </div>
+                                <div>
+                                    <label for="confirmAdminPassword" class="block text-sm font-medium text-gray-700 mb-2">Confirmar Nova Senha</label>
+                                    <input type="password" id="confirmAdminPassword"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium">
+                                    Alterar Dados Admin
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Informações do Sistema -->
+                        <div class="bg-white border border-gray-200 rounded-lg p-6 config-section">
+                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Informações do Sistema</h2>
+                            <div class="space-y-4">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Versão</span>
+                                    <span class="font-medium">3.0.0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Firebase</span>
+                                    <span class="font-medium" id="firebaseStatus">Verificando...</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Último Backup</span>
+                                    <span class="font-medium" id="lastBackup">-</span>
+                                </div>
+                                <button id="backupData" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg mt-4">
+                                    Fazer Backup dos Dados
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div id="adminMessage" class="hidden mt-6 p-4 rounded-lg text-sm"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Usuario -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Editar Cliente</h3>
+                <button id="closeEditModal" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserOriginalEmail">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Cliente</label>
+                        <input type="text" id="editUserName" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+                        <input type="email" id="editUserEmail" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                        <input type="text" id="editUserPassword" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select id="editUserStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <option value="true">Primeiro acesso pendente</option>
+                            <option value="false">Senha já alterada</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" id="cancelEdit" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Salvar Alterações</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -209,8 +333,8 @@
 
         // Global variables
         let app, db, isFirebaseReady = false;
-        let currentAdminSettings = { adminPassword: '123456' };
-        const AUTHORIZED_ADMIN = 'compras.thebaldi@gmail.com';
+        let currentAdminSettings = { adminEmail: 'compras.thebaldi@gmail.com', adminPassword: '123456' };
+        let currentAdminEmail = 'compras.thebaldi@gmail.com';
 
         // Elements
         const loadingScreen = document.getElementById('loadingScreen');
@@ -243,6 +367,8 @@
                 console.log('Firebase inicializado com sucesso');
                 
                 isFirebaseReady = true;
+                document.getElementById('firebaseStatus').textContent = 'Online';
+                
                 setTimeout(() => {
                     showAdminLogin();
                 }, 1000);
@@ -250,6 +376,7 @@
             } catch (error) {
                 console.error('Erro ao inicializar Firebase:', error);
                 updateLoadingText('Erro na conexão - modo offline');
+                document.getElementById('firebaseStatus').textContent = 'Offline';
                 setTimeout(() => {
                     showAdminLogin();
                 }, 2000);
@@ -267,12 +394,39 @@
             }
         }
 
-        async function showAdminPanel() {
+        async function showAdminPanel(email) {
             adminLogin.classList.add('hidden');
             adminPanel.classList.remove('hidden');
             
+            currentAdminEmail = email;
+            document.getElementById('currentAdminEmail').textContent = email;
+            
             await loadUsers();
         }
+
+        // Tab system
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('tab-btn')) {
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active', 'text-blue-600');
+                    btn.classList.add('text-gray-500');
+                });
+                
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+
+                // Show selected tab
+                const tabId = e.target.getAttribute('data-tab');
+                document.getElementById(tabId).classList.remove('hidden');
+                
+                // Add active class to clicked tab
+                e.target.classList.add('active', 'text-blue-600');
+                e.target.classList.remove('text-gray-500');
+            }
+        });
 
         // Admin login
         document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
@@ -280,11 +434,6 @@
             
             const email = document.getElementById('adminEmail').value.trim().toLowerCase();
             const password = document.getElementById('adminPassword').value;
-
-            if (email !== AUTHORIZED_ADMIN.toLowerCase()) {
-                showAdminError('E-mail não autorizado.');
-                return;
-            }
 
             // Get admin settings from Firebase if available
             if (isFirebaseReady) {
@@ -298,12 +447,17 @@
                 }
             }
 
+            if (email !== currentAdminSettings.adminEmail.toLowerCase()) {
+                showAdminError('E-mail não autorizado.');
+                return;
+            }
+
             if (password !== currentAdminSettings.adminPassword) {
                 showAdminError('Senha incorreta.');
                 return;
             }
 
-            showAdminPanel();
+            await showAdminPanel(currentAdminSettings.adminEmail);
         });
 
         // Load users
@@ -340,17 +494,30 @@
                         '<span class="px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">Primeiro acesso</span>' : 
                         '<span class="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full">Ativo</span>';
 
+                    const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleDateString('pt-BR') : 'N/A';
+
                     userDiv.innerHTML = `
                         <div class="flex-1">
-                            <p class="font-semibold text-gray-800">${user.email}</p>
-                            <p class="text-sm text-gray-600">Senha: ${user.password}</p>
+                            <div class="flex items-center mb-2">
+                                <div>
+                                    <p class="font-semibold text-gray-800">${user.email}</p>
+                                    <p class="text-sm text-gray-600">${user.name || 'Nome não informado'}</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-2">
+                                <span><strong>Senha:</strong> <code class="bg-gray-200 px-2 py-1 rounded text-xs">${user.password}</code></span>
+                                <span><strong>Criado em:</strong> ${createdAt}</span>
+                            </div>
                             ${statusBadge}
                         </div>
-                        <div class="flex space-x-2">
-                            <button onclick="resetUserPassword('${user.email}')" class="px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded">
+                        <div class="flex flex-col space-y-2 ml-4">
+                            <button onclick="editUser('${user.email}')" class="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded border border-blue-300">
+                                Editar
+                            </button>
+                            <button onclick="resetUserPassword('${user.email}')" class="px-3 py-1 text-xs bg-orange-100 hover:bg-orange-200 text-orange-800 rounded border border-orange-300">
                                 Reset
                             </button>
-                            <button onclick="removeUser('${user.email}')" class="px-3 py-1 text-xs bg-red-100 text-red-800 rounded">
+                            <button onclick="removeUser('${user.email}')" class="px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded border border-red-300">
                                 Remover
                             </button>
                         </div>
@@ -372,10 +539,11 @@
             e.preventDefault();
             
             const email = document.getElementById('userEmail').value.trim().toLowerCase();
+            const name = document.getElementById('userName').value.trim();
             const password = document.getElementById('initialPassword').value.trim();
 
             if (!email || !password) {
-                showMessage('Preencha todos os campos.', 'error');
+                showMessage('Preencha pelo menos o e-mail e a senha.', 'error');
                 return;
             }
 
@@ -388,11 +556,11 @@
                 const userDocId = email.replace(/[.]/g, '_');
                 const userData = {
                     email: email,
+                    name: name,
                     password: password,
-                    name: '',
                     isFirstLogin: true,
                     createdAt: new Date().toISOString(),
-                    createdBy: AUTHORIZED_ADMIN
+                    createdBy: currentAdminEmail
                 };
 
                 await db.collection('portfolio_users').doc(userDocId).set(userData);
@@ -403,7 +571,7 @@
                     userEmail: email,
                     details: { action: 'Usuário adicionado' },
                     timestamp: new Date().toISOString(),
-                    adminEmail: AUTHORIZED_ADMIN
+                    adminEmail: currentAdminEmail
                 });
 
                 document.getElementById('addUserForm').reset();
@@ -427,6 +595,34 @@
         });
 
         // Global functions
+        window.editUser = async function(email) {
+            if (!isFirebaseReady) {
+                showMessage('Firebase não disponível.', 'error');
+                return;
+            }
+            
+            try {
+                const userDocId = email.replace(/[.]/g, '_');
+                const userDoc = await db.collection('portfolio_users').doc(userDocId).get();
+                
+                if (!userDoc.exists) {
+                    showMessage('Usuário não encontrado.', 'error');
+                    return;
+                }
+
+                const user = userDoc.data();
+                document.getElementById('editUserOriginalEmail').value = email;
+                document.getElementById('editUserName').value = user.name || '';
+                document.getElementById('editUserEmail').value = email;
+                document.getElementById('editUserPassword').value = user.password;
+                document.getElementById('editUserStatus').value = user.isFirstLogin.toString();
+                document.getElementById('editUserModal').classList.add('show');
+            } catch (error) {
+                console.error('Erro ao carregar usuário:', error);
+                showMessage('Erro ao carregar usuário: ' + error.message, 'error');
+            }
+        }
+
         window.resetUserPassword = async function(email) {
             if (!confirm(`Resetar senha do cliente ${email}?`)) return;
             
@@ -476,6 +672,176 @@
                 showMessage('Erro ao remover cliente: ' + error.message, 'error');
             }
         }
+
+        // Edit user form submission
+        document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const originalEmail = document.getElementById('editUserOriginalEmail').value;
+            const newEmail = document.getElementById('editUserEmail').value.trim().toLowerCase();
+            const name = document.getElementById('editUserName').value.trim();
+            const password = document.getElementById('editUserPassword').value;
+            const isFirstLogin = document.getElementById('editUserStatus').value === 'true';
+
+            if (!newEmail) {
+                showMessage('O campo de e-mail não pode estar vazio.', 'error');
+                return;
+            }
+
+            try {
+                const updateData = {
+                    name: name,
+                    password: password,
+                    isFirstLogin: isFirstLogin,
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (originalEmail !== newEmail) {
+                    // Email changed - need to create new document and delete old
+                    const originalDocId = originalEmail.replace(/[.]/g, '_');
+                    const newDocId = newEmail.replace(/[.]/g, '_');
+                    
+                    // Get original data
+                    const originalDoc = await db.collection('portfolio_users').doc(originalDocId).get();
+                    const originalData = originalDoc.data();
+                    
+                    // Create new document
+                    await db.collection('portfolio_users').doc(newDocId).set({
+                        ...originalData,
+                        ...updateData,
+                        email: newEmail
+                    });
+                    
+                    // Delete original document
+                    await db.collection('portfolio_users').doc(originalDocId).delete();
+                } else {
+                    // Just update existing document
+                    const userDocId = originalEmail.replace(/[.]/g, '_');
+                    await db.collection('portfolio_users').doc(userDocId).update(updateData);
+                }
+
+                document.getElementById('editUserModal').classList.remove('show');
+                showMessage(`Cliente ${newEmail} atualizado com sucesso!`, 'success');
+                await loadUsers();
+            } catch (error) {
+                console.error('Erro ao editar usuário:', error);
+                showMessage('Erro ao atualizar cliente: ' + error.message, 'error');
+            }
+        });
+
+        // Close edit modal
+        document.getElementById('closeEditModal').addEventListener('click', () => {
+            document.getElementById('editUserModal').classList.remove('show');
+        });
+        document.getElementById('cancelEdit').addEventListener('click', () => {
+            document.getElementById('editUserModal').classList.remove('show');
+        });
+
+        // Change admin settings form
+        document.getElementById('changeAdminForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const newEmail = document.getElementById('newAdminEmail').value.trim();
+            const currentPassword = document.getElementById('currentAdminPassword').value;
+            const newPassword = document.getElementById('newAdminPassword').value;
+            const confirmPassword = document.getElementById('confirmAdminPassword').value;
+
+            // Verify current password
+            if (currentPassword !== currentAdminSettings.adminPassword) {
+                showMessage('Senha atual incorreta.', 'error');
+                return;
+            }
+
+            // Check if new password matches confirmation
+            if (newPassword && newPassword !== confirmPassword) {
+                showMessage('A nova senha e confirmação não coincidem.', 'error');
+                return;
+            }
+
+            if (newPassword && newPassword.length < 6) {
+                showMessage('A nova senha deve ter pelo menos 6 caracteres.', 'error');
+                return;
+            }
+
+            if (!isFirebaseReady) {
+                showMessage('Firebase não disponível.', 'error');
+                return;
+            }
+
+            try {
+                const updateData = {
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (newEmail) updateData.adminEmail = newEmail;
+                if (newPassword) updateData.adminPassword = newPassword;
+
+                await db.collection('admin_settings').doc('main').update(updateData);
+                
+                // Update current settings
+                currentAdminSettings = { ...currentAdminSettings, ...updateData };
+                if (newEmail) {
+                    currentAdminEmail = newEmail;
+                    document.getElementById('currentAdminEmail').textContent = newEmail;
+                }
+
+                document.getElementById('changeAdminForm').reset();
+                showMessage('Dados administrativos atualizados com sucesso!', 'success');
+
+            } catch (error) {
+                console.error('Erro ao alterar dados admin:', error);
+                showMessage('Erro ao alterar dados: ' + error.message, 'error');
+            }
+        });
+
+        // Backup functionality
+        document.getElementById('backupData').addEventListener('click', async function() {
+            if (!isFirebaseReady) {
+                showMessage('Firebase não disponível para backup.', 'error');
+                return;
+            }
+
+            try {
+                const usersSnapshot = await db.collection('portfolio_users').get();
+                const adminSnapshot = await db.collection('admin_settings').get();
+                const logsSnapshot = await db.collection('system_logs').orderBy('timestamp', 'desc').limit(100).get();
+
+                const backupData = {
+                    users: {},
+                    admin: {},
+                    logs: [],
+                    timestamp: new Date().toISOString(),
+                    version: '3.0.0'
+                };
+
+                usersSnapshot.forEach(doc => {
+                    backupData.users[doc.id] = doc.data();
+                });
+
+                adminSnapshot.forEach(doc => {
+                    backupData.admin[doc.id] = doc.data();
+                });
+
+                logsSnapshot.forEach(doc => {
+                    backupData.logs.push(doc.data());
+                });
+
+                const dataStr = JSON.stringify(backupData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `portfolio-backup-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+
+                document.getElementById('lastBackup').textContent = new Date().toLocaleString('pt-BR');
+                showMessage('Backup realizado com sucesso!', 'success');
+
+            } catch (error) {
+                console.error('Erro ao fazer backup:', error);
+                showMessage('Erro ao fazer backup: ' + error.message, 'error');
+            }
+        });
 
         // Logout
         document.getElementById('adminLogout').addEventListener('click', function() {
