@@ -20,51 +20,32 @@
         <p class="mt-2 text-lg max-w-2xl">Projeto de Urbanismo, Paisagismo e Sinalização do Estacionamento</p>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "..." };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
+    <script>
         function navigateTo(page) {
-            // Corrigido: usando pathname para navegação relativa no ambiente de preview.
-            window.location.pathname = page;
+            // Cria um link temporário para navegar, uma abordagem mais robusta para ambientes restritos.
+            const link = document.createElement('a');
+            link.href = page;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
-        async function checkUserStatus() {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-
+        setTimeout(() => {
             const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
-            const loggedUserEmail = sessionStorage.getItem('loggedInUser');
+            const loggedUser = sessionStorage.getItem('loggedInUser');
 
-            if (isAuthenticated && loggedUserEmail) {
-                const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, loggedUserEmail);
-                try {
-                    const docSnap = await getDoc(userDocRef);
-                    if (docSnap.exists() && docSnap.data().isFirstLogin) {
-                        navigateTo('change-password.html');
-                    } else {
-                        navigateTo('portfolio.html');
-                    }
-                } catch (error) {
-                    console.error("Error checking user status: ", error);
-                    navigateTo('login.html');
+            if (isAuthenticated && loggedUser) {
+                const users = JSON.parse(localStorage.getItem('portfolioUsers')) || {};
+                const user = users[loggedUser];
+                if (user && user.isFirstLogin) {
+                    navigateTo('change-password.html');
+                } else {
+                    navigateTo('portfolio.html');
                 }
             } else {
                 navigateTo('login.html');
             }
-        }
-
-        setTimeout(checkUserStatus, 1500);
+        }, 1500);
     </script>
 </body>
 </html>

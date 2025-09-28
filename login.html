@@ -69,50 +69,46 @@
         <div id="errorMessage" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm"></div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "...", authDomain: "...", projectId: "..." };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-        document.addEventListener('DOMContentLoaded', async function() {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Se o usuário já estiver logado, redireciona para o portfólio
             if (sessionStorage.getItem('isAuthenticated') === 'true') {
-                window.location.href = 'portfolio.html';
+                window.location.pathname = 'portfolio.html';
                 return;
             }
 
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-
-            async function authenticateUser(email, password) {
-                const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, email.toLowerCase());
-                try {
-                    const docSnap = await getDoc(userDocRef);
-                    if (!docSnap.exists()) {
-                        return { success: false, message: 'Usuário não encontrado.' };
-                    }
-                    
-                    const user = docSnap.data();
-                    if (user.password !== password) {
-                        return { success: false, message: 'Senha incorreta.' };
-                    }
-
-                    return { success: true, isFirstLogin: user.isFirstLogin };
-                } catch (error) {
-                    console.error("Erro de autenticação:", error);
-                    return { success: false, message: 'Ocorreu um erro. Tente novamente.' };
+            // Inicializa usuários de exemplo se não houver nenhum
+            function initializeDefaultUsers() {
+                const users = localStorage.getItem('portfolioUsers');
+                if (!users) {
+                    const defaultUsers = {
+                        'cliente1@email.com': { password: '555222', isFirstLogin: false, name: 'Cliente Um', createdAt: new Date().toISOString() },
+                        'cliente2@email.com': { password: 'abc123', isFirstLogin: true, name: 'Cliente Dois', createdAt: new Date().toISOString() },
+                        'exemplo@email.com': { password: '987654', isFirstLogin: true, name: 'Cliente Exemplo', createdAt: new Date().toISOString() }
+                    };
+                    localStorage.setItem('portfolioUsers', JSON.stringify(defaultUsers));
                 }
             }
+            initializeDefaultUsers();
+
+            // Função para autenticar o usuário
+            function authenticateUser(email, password) {
+                const users = JSON.parse(localStorage.getItem('portfolioUsers')) || {};
+                const user = users[email.toLowerCase()];
+
+                if (!user) {
+                    return { success: false, message: 'Usuário não encontrado.' };
+                }
+
+                if (user.password !== password) {
+                    return { success: false, message: 'Senha incorreta.' };
+                }
+
+                return { success: true, isFirstLogin: user.isFirstLogin };
+            }
             
-            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            // Manipulador do formulário
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
                 e.preventDefault();
 
                 const email = document.getElementById('email').value.trim();
@@ -123,21 +119,22 @@
                     return;
                 }
 
+                // Lógica de login para admin
                 if (email.toLowerCase() === 'compras.thebaldi@gmail.com') {
-                     window.location.href = 'admin.html';
+                     window.location.pathname = 'admin.html';
                      return;
                 }
 
-                const authResult = await authenticateUser(email, password);
+                const authResult = authenticateUser(email, password);
 
                 if (authResult.success) {
                     sessionStorage.setItem('isAuthenticated', 'true');
                     sessionStorage.setItem('loggedInUser', email.toLowerCase());
 
                     if (authResult.isFirstLogin) {
-                        window.location.href = 'change-password.html';
+                        window.location.pathname = 'change-password.html';
                     } else {
-                        window.location.href = 'portfolio.html';
+                        window.location.pathname = 'portfolio.html';
                     }
                 } else {
                     showError(authResult.message);
