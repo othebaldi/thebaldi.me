@@ -9,6 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&display=swap" rel="stylesheet">
     
+    <!-- Firebase SDK v8 (compatível com script tags) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -35,7 +39,8 @@
             </svg>
         </div>
         <h1 class="text-2xl font-bold text-gray-800 mb-2">Inicializando</h1>
-        <p class="text-gray-600">Conectando com o Firebase...</p>
+        <p class="text-gray-600" id="loadingText">Conectando com o Firebase...</p>
+        <div class="mt-4 text-sm text-gray-500" id="statusText"></div>
     </div>
     
     <!-- Container do formulário de login -->
@@ -50,178 +55,370 @@
             <div>
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
                 <input type="email" id="email" name="email" required 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rgb(255,165,44) focus:border-transparent transition duration-200" 
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" 
                        placeholder="seu.email@exemplo.com">
             </div>
             
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
                 <input type="password" id="password" name="password" required 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rgb(255,165,44) focus:border-transparent transition duration-200" 
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200" 
                        placeholder="Digite sua senha">
             </div>
             
-            <button type="submit" 
-                    class="w-full bg-rgb(255,165,44) hover:bg-rgb(230,149,40) text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+            <button type="submit" id="loginBtn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
                 Entrar
             </button>
         </form>
 
         <!-- Mensagem de erro -->
         <div id="errorMessage" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm"></div>
+        
+        <!-- Status de conexão -->
+        <div id="connectionStatus" class="mt-4 text-center text-sm">
+            <span class="text-gray-500">Status: </span>
+            <span id="connectionText" class="font-medium text-blue-600">Conectando...</span>
+        </div>
     </div>
 
-    <!-- Firebase Integration -->
-    <script type="module">
-        import { firebaseUserManager } from './firebase-utils.js';
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWVI9VHvxARMSM3JV-bXs_73UjKh25mn4",
+            authDomain: "thebaldi-me.firebaseapp.com",
+            projectId: "thebaldi-me",
+            storageBucket: "thebaldi-me.firebasestorage.app",
+            messagingSenderId: "794996190135",
+            appId: "1:794996190135:web:444f87525f52d79c7d5632"
+        };
 
-        // Elementos DOM
-        const loadingScreen = document.getElementById('loadingScreen');
-        const loginContainer = document.getElementById('loginContainer');
-        const loginForm = document.getElementById('loginForm');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const errorMessage = document.getElementById('errorMessage');
+        // Global variables
+        let app, db, isFirebaseReady = false;
+        let initTimeout;
 
-        // Inicializar aplicação
+        // Update status functions
+        function updateLoadingText(text) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('statusText').textContent = text;
+        }
+
+        function updateConnectionStatus(status, isOnline = true) {
+            const statusEl = document.getElementById('connectionText');
+            if (statusEl) {
+                statusEl.textContent = status;
+                statusEl.className = isOnline ? 'font-medium text-green-600' : 'font-medium text-red-600';
+            }
+        }
+
+        // Initialize Firebase
+        function initializeFirebase() {
+            try {
+                updateLoadingText('Inicializando Firebase...');
+                console.log('Iniciando Firebase...');
+                
+                // Initialize Firebase
+                app = firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                
+                updateLoadingText('Firebase conectado!');
+                console.log('Firebase inicializado com sucesso');
+                
+                isFirebaseReady = true;
+                clearTimeout(initTimeout);
+                
+                // Test connection
+                testFirebaseConnection();
+                
+            } catch (error) {
+                console.error('Erro ao inicializar Firebase:', error);
+                updateLoadingText('Erro na conexão: ' + error.message);
+                handleFirebaseError(error);
+            }
+        }
+
+        // Test Firebase connection
+        async function testFirebaseConnection() {
+            try {
+                updateLoadingText('Testando conexão...');
+                
+                // Try to access a collection
+                const testRef = db.collection('system_logs');
+                await testRef.limit(1).get();
+                
+                updateLoadingText('Conexão estabelecida!');
+                updateConnectionStatus('Online');
+                
+                setTimeout(() => {
+                    initializeApp();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Erro no teste de conexão:', error);
+                updateLoadingText('Problemas de conectividade');
+                updateConnectionStatus('Offline', false);
+                
+                // Still proceed with initialization
+                setTimeout(() => {
+                    initializeApp();
+                }, 2000);
+            }
+        }
+
+        // Handle Firebase errors
+        function handleFirebaseError(error) {
+            console.error('Firebase Error:', error);
+            updateConnectionStatus('Erro de conexão', false);
+            
+            // Proceed with offline mode after delay
+            setTimeout(() => {
+                initializeOfflineMode();
+            }, 3000);
+        }
+
+        // Initialize offline mode
+        function initializeOfflineMode() {
+            console.log('Modo offline ativado');
+            updateLoadingText('Modo offline - usando dados locais');
+            updateConnectionStatus('Offline - dados locais', false);
+            
+            setTimeout(() => {
+                showLoginForm();
+            }, 1500);
+        }
+
+        // Initialize app after Firebase is ready
         async function initializeApp() {
             try {
-                // Se o usuário já estiver logado, redireciona para o portfólio
+                updateLoadingText('Inicializando aplicação...');
+                
+                // Check if already authenticated
                 if (sessionStorage.getItem('isAuthenticated') === 'true') {
-                    window.location.pathname = '/portfolio.html';
+                    updateLoadingText('Usuário já autenticado...');
+                    window.location.href = 'portfolio.html';
                     return;
                 }
 
-                // Esconder loading e mostrar formulário de login
-                loadingScreen.classList.add('hidden');
-                loginContainer.classList.remove('hidden');
+                // Initialize default users if needed
+                if (isFirebaseReady) {
+                    await createDefaultUsers();
+                }
 
-                // Inicializar usuários padrão se não houver nenhum (para compatibilidade)
-                await initializeDefaultUsers();
-
+                showLoginForm();
+                
             } catch (error) {
-                console.error('Erro ao inicializar:', error);
-                showError('Erro ao conectar com o Firebase: ' + error.message);
-                loadingScreen.classList.add('hidden');
-                loginContainer.classList.remove('hidden');
+                console.error('Erro ao inicializar app:', error);
+                showLoginForm();
             }
         }
 
-        // Inicializar usuários de exemplo se não houver nenhum (compatibilidade)
-        async function initializeDefaultUsers() {
+        // Create default users for testing
+        async function createDefaultUsers() {
             try {
-                const usersResult = await firebaseUserManager.getAllUsers();
+                updateLoadingText('Verificando usuários...');
                 
-                if (usersResult.success && Object.keys(usersResult.users).length === 0) {
-                    // Adicionar usuários padrão para compatibilidade
+                const usersRef = db.collection('portfolio_users');
+                const snapshot = await usersRef.limit(1).get();
+                
+                if (snapshot.empty) {
+                    updateLoadingText('Criando usuários padrão...');
+                    
                     const defaultUsers = [
                         {
                             email: 'cliente1@email.com',
-                            password: '555222',
+                            password: '555222', 
                             name: 'Cliente Um',
-                            isFirstLogin: false
+                            isFirstLogin: false,
+                            createdAt: new Date().toISOString()
                         },
                         {
-                            email: 'cliente2@email.com', 
+                            email: 'cliente2@email.com',
                             password: 'abc123',
-                            name: 'Cliente Dois',
-                            isFirstLogin: true
+                            name: 'Cliente Dois', 
+                            isFirstLogin: true,
+                            createdAt: new Date().toISOString()
                         },
                         {
-                            email: 'exemplo@email.com',
-                            password: '987654', 
-                            name: 'Cliente Exemplo',
-                            isFirstLogin: true
+                            email: 'teste@email.com',
+                            password: '123456',
+                            name: 'Cliente Teste',
+                            isFirstLogin: true,
+                            createdAt: new Date().toISOString()
                         }
                     ];
 
-                    for (const user of defaultUsers) {
-                        await firebaseUserManager.addUser(user);
+                    for (const userData of defaultUsers) {
+                        const userDocId = userData.email.replace(/[.]/g, '_');
+                        await usersRef.doc(userDocId).set(userData);
                     }
+                    
+                    console.log('Usuários padrão criados');
                 }
             } catch (error) {
-                console.error('Erro ao inicializar usuários padrão:', error);
-                // Não bloqueia o login se falhar
+                console.error('Erro ao criar usuários padrão:', error);
+                // Continue mesmo com erro
             }
         }
 
-        // Função para autenticar o usuário
+        // Show login form
+        function showLoginForm() {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('loginContainer').classList.remove('hidden');
+            
+            if (isFirebaseReady) {
+                updateConnectionStatus('Conectado');
+            } else {
+                updateConnectionStatus('Modo offline', false);
+            }
+        }
+
+        // Authenticate user
         async function authenticateUser(email, password) {
             try {
-                const result = await firebaseUserManager.getUserByEmail(email);
+                if (!isFirebaseReady) {
+                    // Fallback to localStorage or default users
+                    const defaultUsers = {
+                        'cliente1@email.com': { email: 'cliente1@email.com', password: '555222', isFirstLogin: false },
+                        'cliente2@email.com': { email: 'cliente2@email.com', password: 'abc123', isFirstLogin: true },
+                        'teste@email.com': { email: 'teste@email.com', password: '123456', isFirstLogin: true }
+                    };
+                    
+                    const user = defaultUsers[email];
+                    if (user && user.password === password) {
+                        return { success: true, user: user, isFirstLogin: user.isFirstLogin };
+                    } else {
+                        return { success: false, message: 'Usuário não encontrado (modo offline).' };
+                    }
+                }
+
+                // Firebase authentication
+                const userDocId = email.replace(/[.]/g, '_');
+                const userDoc = await db.collection('portfolio_users').doc(userDocId).get();
                 
-                if (!result.success) {
+                if (!userDoc.exists) {
                     return { success: false, message: 'Usuário não encontrado.' };
                 }
 
-                const user = result.user;
-                
-                if (user.password !== password) {
+                const userData = userDoc.data();
+                if (userData.password !== password) {
                     return { success: false, message: 'Senha incorreta.' };
                 }
 
-                return { success: true, isFirstLogin: user.isFirstLogin };
+                return { 
+                    success: true, 
+                    user: userData, 
+                    isFirstLogin: userData.isFirstLogin || false 
+                };
+
             } catch (error) {
                 console.error('Erro na autenticação:', error);
-                return { success: false, message: 'Erro interno do servidor.' };
+                return { success: false, message: 'Erro interno: ' + error.message };
             }
         }
 
-        // Manipulador do formulário
-        loginForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Form submission handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value.trim().toLowerCase();
+                const password = document.getElementById('password').value;
+                const loginBtn = document.getElementById('loginBtn');
 
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-
-            if (!email || !password) {
-                showError('Por favor, preencha todos os campos.');
-                return;
-            }
-
-            // Lógica de login para admin
-            if (email.toLowerCase() === 'compras.thebaldi@gmail.com') {
-                window.location.pathname = '/admin.html';
-                return;
-            }
-
-            try {
-                const authResult = await authenticateUser(email, password);
-
-                if (authResult.success) {
-                    sessionStorage.setItem('isAuthenticated', 'true');
-                    sessionStorage.setItem('loggedInUser', email.toLowerCase());
-
-                    // Log da atividade de login
-                    await firebaseUserManager.logActivity('user_login', email, { 
-                        action: 'Login realizado',
-                        timestamp: new Date().toISOString()
-                    });
-
-                    if (authResult.isFirstLogin) {
-                        window.location.pathname = '/change-password.html';
-                    } else {
-                        window.location.pathname = '/portfolio.html';
-                    }
-                } else {
-                    showError(authResult.message);
+                if (!email || !password) {
+                    showError('Por favor, preencha todos os campos.');
+                    return;
                 }
-            } catch (error) {
-                console.error('Erro no login:', error);
-                showError('Erro interno. Tente novamente mais tarde.');
-            }
+
+                // Admin redirect
+                if (email === 'compras.thebaldi@gmail.com') {
+                    window.location.href = 'admin.html';
+                    return;
+                }
+
+                // Disable button during authentication
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Verificando...';
+
+                try {
+                    const result = await authenticateUser(email, password);
+                    
+                    if (result.success) {
+                        sessionStorage.setItem('isAuthenticated', 'true');
+                        sessionStorage.setItem('loggedInUser', email);
+
+                        // Log activity if Firebase is available
+                        if (isFirebaseReady) {
+                            try {
+                                await db.collection('system_logs').add({
+                                    action: 'user_login',
+                                    userEmail: email,
+                                    details: { action: 'Login realizado' },
+                                    timestamp: new Date().toISOString(),
+                                    ip: 'client-side'
+                                });
+                            } catch (logError) {
+                                console.warn('Erro ao registrar log:', logError);
+                            }
+                        }
+
+                        if (result.isFirstLogin) {
+                            window.location.href = 'change-password.html';
+                        } else {
+                            window.location.href = 'portfolio.html';
+                        }
+                    } else {
+                        showError(result.message);
+                    }
+                } catch (error) {
+                    console.error('Erro no login:', error);
+                    showError('Erro no login: ' + error.message);
+                } finally {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Entrar';
+                }
+            });
         });
 
+        // Show error message
         function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.classList.remove('hidden');
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+            
             setTimeout(() => {
-                errorMessage.classList.add('hidden');
-            }, 5000);
+                errorEl.classList.add('hidden');
+            }, 8000);
         }
 
-        // Inicializar aplicação quando a página carregar
-        initializeApp();
+        // Initialize everything when page loads
+        window.addEventListener('load', function() {
+            console.log('Página carregada, inicializando Firebase...');
+            
+            // Set timeout for initialization
+            initTimeout = setTimeout(() => {
+                console.log('Timeout na inicialização do Firebase');
+                updateLoadingText('Timeout - usando modo offline');
+                initializeOfflineMode();
+            }, 15000); // 15 seconds timeout
+            
+            // Wait a bit for Firebase SDK to load
+            setTimeout(() => {
+                if (typeof firebase !== 'undefined') {
+                    initializeFirebase();
+                } else {
+                    console.error('Firebase SDK não carregado');
+                    updateLoadingText('Erro ao carregar Firebase SDK');
+                    initializeOfflineMode();
+                }
+            }, 1000);
+        });
+
+        // Debug info
+        console.log('Login page loaded');
+        console.log('Firebase available:', typeof firebase !== 'undefined');
     </script>
 </body>
 </html>

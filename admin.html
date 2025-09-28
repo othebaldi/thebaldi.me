@@ -9,6 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&display=swap" rel="stylesheet">
     
+    <!-- Firebase SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -37,64 +41,12 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        .encrypted-text {
-            font-family: 'Courier New', monospace;
-            color: #10b981;
-            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-        }
-        .login-attempts {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
         .config-section {
             transition: all 0.3s ease;
         }
         .config-section:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            -webkit-transition: .4s;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            -webkit-transition: .4s;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #2196F3;
-        }
-        input:checked + .slider:before {
-            -webkit-transform: translateX(26px);
-            -ms-transform: translateX(26px);
-            transform: translateX(26px);
         }
         .modal {
             display: none;
@@ -135,10 +87,10 @@
                     </svg>
                 </div>
                 <h1 class="text-2xl font-bold text-gray-800 mb-2">Inicializando Firebase</h1>
-                <p class="text-gray-600 text-sm">Conectando com o banco de dados...</p>
+                <p class="text-gray-600 text-sm" id="loadingText">Conectando com o banco de dados...</p>
             </div>
 
-            <!-- Tela de Login -->
+            <!-- Tela de Login Admin -->
             <div id="admin-login" class="admin-panel max-w-md w-full p-8 rounded-2xl shadow-2xl hidden">
                 <div class="text-center mb-8">
                     <div class="security-badge inline-flex items-center justify-center w-16 h-16 bg-red-600 text-white rounded-full mb-4">
@@ -156,7 +108,7 @@
                         <label for="adminEmail" class="block text-sm font-medium text-gray-700 mb-2">E-mail Administrativo</label>
                         <input type="email" id="adminEmail" required 
                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition duration-200 bg-white/80" 
-                               placeholder="TH3LAB">
+                               placeholder="compras.thebaldi@gmail.com">
                     </div>
                     
                     <div>
@@ -172,20 +124,17 @@
                     </button>
                 </form>
 
-                <div id="loginAttempts" class="hidden mt-4 login-attempts p-3 rounded-lg text-sm">
-                    <div class="flex items-center text-red-700">
-                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                        <span id="attemptText">Tentativas restantes: 10</span>
-                    </div>
-                </div>
-                
                 <div id="adminErrorMessage" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm"></div>
+                
+                <!-- Status de conexão -->
+                <div class="mt-4 text-center text-sm">
+                    <span class="text-gray-500">Status: </span>
+                    <span id="connectionStatus" class="font-medium text-blue-600">Verificando...</span>
+                </div>
             </div>
 
-            <!-- Painel Administrativo -->
-            <div id="adminPanel" class="hidden admin-panel max-w-7xl w-full p-8 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <!-- Painel Administrativo Simplificado -->
+            <div id="adminPanel" class="hidden admin-panel max-w-4xl w-full p-8 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
                 <!-- Header -->
                 <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-200">
                     <div class="flex items-center">
@@ -195,209 +144,49 @@
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-3xl font-bold text-gray-800">Central de Administração</h1>
-                            <p class="text-green-600 font-semibold">Acesso autorizado: <span id="adminUserDisplay"></span></p>
+                            <h1 class="text-3xl font-bold text-gray-800">Painel Admin</h1>
+                            <p class="text-green-600 font-semibold">Acesso autorizado</p>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <div class="text-right text-sm">
-                            <p class="text-gray-600">Último acesso</p>
-                            <p class="font-semibold" id="lastAccessTime"></p>
-                        </div>
-                        <button id="adminLogout" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
-                            Sair
-                        </button>
-                    </div>
+                    <button id="adminLogout" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium">
+                        Sair
+                    </button>
                 </div>
 
-                <!-- Tabs -->
-                <div class="mb-8">
-                    <div class="border-b border-gray-200">
-                        <nav class="-mb-px flex space-x-8">
-                            <button class="tab-btn active py-2 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600" data-tab="dashboard">Dashboard</button>
-                            <button class="tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="users">Gerenciar Usuários</button>
-                            <button class="tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="security">Segurança</button>
-                            <button class="tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="system">Sistema</button>
-                            <button class="tab-btn py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="settings">Configurações</button>
-                        </nav>
-                    </div>
-                </div>
-
-                <!-- Dashboard -->
-                <div id="dashboard" class="tab-content">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 config-section">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-medium text-blue-600">Usuários Ativos</p>
-                                    <p class="text-2xl font-bold text-blue-800" id="activeUsersCount">0</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-green-50 border border-green-200 rounded-lg p-6 config-section">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-medium text-green-600">Logins Hoje</p>
-                                    <p class="text-2xl font-bold text-green-800" id="todayLoginsCount">0</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-6 config-section">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-medium text-purple-600">Sistema</p>
-                                    <p class="text-2xl font-bold text-purple-800">Online</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 config-section">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-yellow-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                <div>
-                                    <p class="text-sm font-medium text-yellow-600">Primeiro Acesso</p>
-                                    <p class="text-2xl font-bold text-yellow-800" id="pendingFirstLogin">0</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-white border border-gray-200 rounded-lg config-section">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h2 class="text-xl font-semibold text-gray-800">Atividades Recentes</h2>
-                        </div>
-                        <div class="p-6">
-                            <div id="recentActivities" class="space-y-4">
-                                <p class="text-gray-500 text-center">Sistema iniciado com sucesso</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gerenciar Usuários -->
-                <div id="users" class="tab-content hidden">
-                    <div class="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg config-section">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Adicionar Novo Cliente</h2>
-                        <form id="addUserForm" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="userEmail" class="block text-sm font-medium text-gray-700 mb-2">E-mail do Cliente</label>
-                                    <input type="email" id="userEmail" required 
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
-                                           placeholder="cliente@email.com">
-                                </div>
-                                <div>
-                                    <label for="initialPassword" class="block text-sm font-medium text-gray-700 mb-2">Senha Inicial</label>
-                                    <div class="relative">
-                                        <input type="text" id="initialPassword" required 
-                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white pr-20" 
-                                               placeholder="123456">
-                                        <button type="button" id="generatePassword" 
-                                                class="absolute right-2 top-2 px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded">Gerar</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Adicionar Cliente</button>
-                        </form>
-                    </div>
-                    
-                    <div class="bg-white border border-gray-200 rounded-lg config-section">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h2 class="text-xl font-semibold text-gray-800">Clientes Cadastrados <span id="totalUsersCount">0</span></h2>
-                        </div>
-                        <div class="p-6">
-                            <div id="usersList" class="space-y-3">
-                                <p class="text-gray-500 text-center py-8">Nenhum cliente cadastrado</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Segurança -->
-                <div id="security" class="tab-content hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="bg-white border border-gray-200 rounded-lg p-6 config-section">
-                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Configurações de Segurança</h2>
-                            <div class="space-y-6">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <h3 class="font-medium text-gray-900">Alterar Senha Admin</h3>
-                                        <p class="text-sm text-gray-500">Alterar sua senha administrativa</p>
-                                    </div>
-                                    <button id="changeAdminPassword" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">Alterar</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-white border border-gray-200 rounded-lg p-6 config-section">
-                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Log de Segurança</h2>
-                            <div id="securityLog" class="space-y-3 max-h-64 overflow-y-auto">
-                                <p class="text-gray-500 text-center">Sistema funcionando normalmente</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sistema -->
-                <div id="system" class="tab-content hidden">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="bg-white border border-gray-200 rounded-lg p-6 config-section">
-                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Informações do Sistema</h2>
-                            <div class="space-y-4">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Versão</span>
-                                    <span class="font-medium">2.0.1</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Última Atualização</span>
-                                    <span class="font-medium" id="lastUpdate"></span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Tempo Online</span>
-                                    <span class="font-medium">99.9%</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-white border border-gray-200 rounded-lg p-6 config-section">
-                            <h2 class="text-xl font-semibold text-gray-800 mb-4">Backup e Manutenção</h2>
-                            <div class="space-y-4">
-                                <button id="backupData" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">Fazer Backup dos Dados</button>
-                                <button id="clearLogs" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg">Limpar Logs Antigos</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Configurações -->
-                <div id="settings" class="tab-content hidden">
-                    <div class="bg-white border border-gray-200 rounded-lg p-6 config-section">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Configurações Gerais</h2>
-                        <div class="space-y-6">
+                <!-- Adicionar Usuário -->
+                <div class="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg config-section">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Adicionar Novo Cliente</h2>
+                    <form id="addUserForm" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Título do Site</label>
-                                <input type="text" id="siteTitle" value="Portfólio de Arquitetura" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <label for="userEmail" class="block text-sm font-medium text-gray-700 mb-2">E-mail do Cliente</label>
+                                <input type="email" id="userEmail" required 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" 
+                                       placeholder="cliente@email.com">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">E-mail de Contato</label>
-                                <input type="email" id="contactEmail" value="compras.thebaldi@gmail.com" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <label for="initialPassword" class="block text-sm font-medium text-gray-700 mb-2">Senha Inicial</label>
+                                <div class="relative">
+                                    <input type="text" id="initialPassword" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white pr-20" 
+                                           placeholder="123456">
+                                    <button type="button" id="generatePassword" 
+                                            class="absolute right-2 top-2 px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded">Gerar</button>
+                                </div>
                             </div>
+                        </div>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Adicionar Cliente</button>
+                    </form>
+                </div>
+                
+                <!-- Lista de Usuários -->
+                <div class="bg-white border border-gray-200 rounded-lg config-section">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-800">Clientes Cadastrados <span id="totalUsersCount">0</span></h2>
+                    </div>
+                    <div class="p-6">
+                        <div id="usersList" class="space-y-3">
+                            <p class="text-gray-500 text-center py-8">Carregando clientes...</p>
                         </div>
                     </div>
                 </div>
@@ -407,319 +196,161 @@
         </div>
     </div>
 
-    <!-- Modal Editar Usuario -->
-    <div id="editUserModal" class="modal">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Editar Cliente</h3>
-                <button id="closeEditModal" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <form id="editUserForm">
-                <input type="hidden" id="editUserEmail">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Cliente</label>
-                        <input type="text" id="editUserName" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
-                        <input type="email" id="editUserEmailField" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Senha Atual</label>
-                        <input type="text" id="editUserPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                        <select id="editUserStatus" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                            <option value="true">Primeiro acesso pendente</option>
-                            <option value="false">Senha já alterada</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex justify-end space-x-3 mt-6">
-                    <button type="button" id="cancelEdit" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Salvar Alterações</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWVI9VHvxARMSM3JV-bXs_73UjKh25mn4",
+            authDomain: "thebaldi-me.firebaseapp.com",
+            projectId: "thebaldi-me",
+            storageBucket: "thebaldi-me.firebasestorage.app",
+            messagingSenderId: "794996190135",
+            appId: "1:794996190135:web:444f87525f52d79c7d5632"
+        };
 
-    <!-- Modal Alterar Senha Admin -->
-    <div id="changePasswordModal" class="modal">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Alterar Senha Administrativa</h3>
-                <button id="closePasswordModal" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <form id="changePasswordForm">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Senha Atual</label>
-                        <input type="password" id="currentPassword" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Nova Senha</label>
-                        <input type="password" id="newPassword" required minlength="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirmar Nova Senha</label>
-                        <input type="password" id="confirmPassword" required minlength="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                    </div>
-                </div>
-                <div class="flex justify-end space-x-3 mt-6">
-                    <button type="button" id="cancelPasswordChange" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Alterar Senha</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Firebase Integration -->
-    <script type="module">
-        import { firebaseUserManager } from './firebase-utils.js';
-
-        // Configurações
+        // Global variables
+        let app, db, isFirebaseReady = false;
+        let currentAdminSettings = { adminPassword: '123456' };
         const AUTHORIZED_ADMIN = 'compras.thebaldi@gmail.com';
-        const MAX_LOGIN_ATTEMPTS = 10;
-        const LOCKOUT_TIME = 30 * 60 * 1000; // 30 minutos
 
-        let loginAttempts = parseInt(sessionStorage.getItem('adminLoginAttempts')) || 0;
-        let lastAttemptTime = parseInt(sessionStorage.getItem('adminLastAttempt')) || 0;
-        let isLocked = false;
-        let currentAdminSettings = null;
-
-        // Elementos DOM
+        // Elements
         const loadingScreen = document.getElementById('loadingScreen');
         const adminLogin = document.getElementById('admin-login');
         const adminPanel = document.getElementById('adminPanel');
-        const adminLoginForm = document.getElementById('adminLoginForm');
-        const adminEmail = document.getElementById('adminEmail');
-        const adminPassword = document.getElementById('adminPassword');
-        const loginAttemptsDiv = document.getElementById('loginAttempts');
-        const attemptText = document.getElementById('attemptText');
-        const adminErrorMessage = document.getElementById('adminErrorMessage');
-        const adminUserDisplay = document.getElementById('adminUserDisplay');
+        const loadingText = document.getElementById('loadingText');
+        const connectionStatus = document.getElementById('connectionStatus');
 
-        // Inicializar Firebase e carregar dados
-        async function initializeApp() {
+        function updateLoadingText(text) {
+            if (loadingText) loadingText.textContent = text;
+        }
+
+        function updateConnectionStatus(status, isOnline = true) {
+            if (connectionStatus) {
+                connectionStatus.textContent = status;
+                connectionStatus.className = isOnline ? 'font-medium text-green-600' : 'font-medium text-red-600';
+            }
+        }
+
+        // Initialize Firebase
+        function initializeFirebase() {
             try {
-                // Carregar configurações do admin
-                const adminResult = await firebaseUserManager.getAdminSettings();
-                if (adminResult.success) {
-                    currentAdminSettings = adminResult.settings;
-                } else {
-                    throw new Error('Erro ao carregar configurações do admin');
-                }
-
-                // Esconder loading e mostrar login
-                loadingScreen.classList.add('hidden');
-                adminLogin.classList.remove('hidden');
-
-                // Verificar se já está autenticado
-                checkExistingAuth();
+                updateLoadingText('Inicializando Firebase...');
+                console.log('Iniciando Firebase...');
+                
+                app = firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                
+                updateLoadingText('Firebase conectado!');
+                console.log('Firebase inicializado com sucesso');
+                
+                isFirebaseReady = true;
+                setTimeout(() => {
+                    showAdminLogin();
+                }, 1000);
+                
             } catch (error) {
-                console.error('Erro ao inicializar:', error);
-                showError('Erro ao conectar com o Firebase: ' + error.message);
-                loadingScreen.classList.add('hidden');
-                adminLogin.classList.remove('hidden');
+                console.error('Erro ao inicializar Firebase:', error);
+                updateLoadingText('Erro na conexão - modo offline');
+                setTimeout(() => {
+                    showAdminLogin();
+                }, 2000);
             }
         }
 
-        // Verificar lockout
-        function checkLockout() {
-            const now = Date.now();
-            if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
-                const timePassed = now - lastAttemptTime;
-                if (timePassed < LOCKOUT_TIME) {
-                    isLocked = true;
-                    const remainingTime = Math.ceil((LOCKOUT_TIME - timePassed) / 1000 / 60);
-                    showError(`Sistema bloqueado. Aguarde ${remainingTime} minutos.`);
-                    document.getElementById('adminLoginBtn').disabled = true;
-                    document.getElementById('loginBtnText').textContent = 'Bloqueado';
-                    return true;
-                } else {
-                    loginAttempts = 0;
-                    sessionStorage.removeItem('adminLoginAttempts');
-                    sessionStorage.removeItem('adminLastAttempt');
-                    isLocked = false;
-                }
-            }
-            return false;
-        }
-
-        // Sistema de login
-        adminLoginForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        function showAdminLogin() {
+            loadingScreen.classList.add('hidden');
+            adminLogin.classList.remove('hidden');
             
-            if (isLocked || checkLockout()) return;
-
-            const email = adminEmail.value.trim().toLowerCase();
-            const password = adminPassword.value;
-
-            if (email !== AUTHORIZED_ADMIN.toLowerCase()) {
-                handleFailedAttempt('E-mail não autorizado.');
-                return;
-            }
-
-            if (password !== currentAdminSettings.adminPassword) {
-                handleFailedAttempt('Senha incorreta.');
-                return;
-            }
-
-            // Login bem-sucedido
-            sessionStorage.removeItem('adminLoginAttempts');
-            sessionStorage.removeItem('adminLastAttempt');
-            sessionStorage.setItem('adminAuthenticated', 'true');
-            sessionStorage.setItem('adminUser', email);
-
-            // Atualizar último acesso
-            await firebaseUserManager.updateAdminSettings({
-                lastAccess: new Date().toISOString()
-            });
-
-            showAdminPanel(email);
-        });
-
-        function handleFailedAttempt(message) {
-            loginAttempts++;
-            sessionStorage.setItem('adminLoginAttempts', loginAttempts.toString());
-            sessionStorage.setItem('adminLastAttempt', Date.now().toString());
-
-            const remainingAttempts = MAX_LOGIN_ATTEMPTS - loginAttempts;
-            
-            if (remainingAttempts <= 0) {
-                showError('Tentativas esgotadas. Bloqueado por 30 minutos.');
-                document.getElementById('adminLoginBtn').disabled = true;
-                document.getElementById('loginBtnText').textContent = 'Bloqueado';
-                isLocked = true;
+            if (isFirebaseReady) {
+                updateConnectionStatus('Firebase Online');
             } else {
-                showError(message);
-                attemptText.textContent = `Tentativas restantes: ${remainingAttempts}`;
-                loginAttemptsDiv.classList.remove('hidden');
+                updateConnectionStatus('Modo Offline', false);
             }
         }
 
-        async function showAdminPanel(email) {
+        async function showAdminPanel() {
             adminLogin.classList.add('hidden');
             adminPanel.classList.remove('hidden');
-            adminUserDisplay.textContent = email;
-            document.getElementById('lastAccessTime').textContent = new Date().toLocaleString('pt-BR');
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('pt-BR');
             
-            await loadDashboardStats();
             await loadUsers();
         }
 
-        // Sistema de tabs
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('tab-btn')) {
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
-                    btn.classList.add('border-transparent', 'text-gray-500');
-                });
-                
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.add('hidden');
-                });
+        // Admin login
+        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('adminEmail').value.trim().toLowerCase();
+            const password = document.getElementById('adminPassword').value;
 
-                const tabId = e.target.getAttribute('data-tab');
-                document.getElementById(tabId).classList.remove('hidden');
-                
-                e.target.classList.add('active', 'border-blue-500', 'text-blue-600');
-                e.target.classList.remove('border-transparent', 'text-gray-500');
+            if (email !== AUTHORIZED_ADMIN.toLowerCase()) {
+                showAdminError('E-mail não autorizado.');
+                return;
             }
+
+            // Get admin settings from Firebase if available
+            if (isFirebaseReady) {
+                try {
+                    const adminDoc = await db.collection('admin_settings').doc('main').get();
+                    if (adminDoc.exists) {
+                        currentAdminSettings = adminDoc.data();
+                    }
+                } catch (error) {
+                    console.log('Usando configurações padrão:', error);
+                }
+            }
+
+            if (password !== currentAdminSettings.adminPassword) {
+                showAdminError('Senha incorreta.');
+                return;
+            }
+
+            showAdminPanel();
         });
 
-        async function loadDashboardStats() {
-            try {
-                const usersResult = await firebaseUserManager.getAllUsers();
-                const users = usersResult.success ? usersResult.users : {};
-                
-                const activeUsers = Object.keys(users).length;
-                const pendingFirst = Object.values(users).filter(u => u.isFirstLogin).length;
-                
-                document.getElementById('activeUsersCount').textContent = activeUsers;
-                document.getElementById('todayLoginsCount').textContent = '0'; // Implementar contagem de logins diários
-                document.getElementById('pendingFirstLogin').textContent = pendingFirst;
-                document.getElementById('totalUsersCount').textContent = activeUsers;
-
-                // Carregar logs recentes
-                const logsResult = await firebaseUserManager.getRecentLogs(5);
-                if (logsResult.success && logsResult.logs.length > 0) {
-                    const activitiesDiv = document.getElementById('recentActivities');
-                    activitiesDiv.innerHTML = '';
-                    
-                    logsResult.logs.forEach(log => {
-                        const activity = document.createElement('div');
-                        activity.className = 'text-sm text-gray-600';
-                        activity.innerHTML = `
-                            <strong>${new Date(log.timestamp).toLocaleString('pt-BR')}</strong> - 
-                            ${log.details.action} (${log.userEmail})
-                        `;
-                        activitiesDiv.appendChild(activity);
-                    });
-                }
-            } catch (error) {
-                console.error('Erro ao carregar estatísticas:', error);
-            }
-        }
-
+        // Load users
         async function loadUsers() {
             try {
-                const usersResult = await firebaseUserManager.getAllUsers();
-                const users = usersResult.success ? usersResult.users : {};
                 const usersList = document.getElementById('usersList');
+                const totalCount = document.getElementById('totalUsersCount');
                 
-                if (Object.keys(users).length === 0) {
+                if (!isFirebaseReady) {
+                    usersList.innerHTML = '<p class="text-gray-500 text-center py-8">Modo offline - nenhum cliente disponível</p>';
+                    totalCount.textContent = '0';
+                    return;
+                }
+
+                const usersSnapshot = await db.collection('portfolio_users').get();
+                
+                if (usersSnapshot.empty) {
                     usersList.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum cliente cadastrado</p>';
+                    totalCount.textContent = '0';
                     return;
                 }
 
                 usersList.innerHTML = '';
-                
-                Object.keys(users).forEach(email => {
-                    const user = users[email];
+                let count = 0;
+
+                usersSnapshot.forEach((doc) => {
+                    const user = doc.data();
+                    count++;
+                    
                     const userDiv = document.createElement('div');
-                    userDiv.className = 'flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:shadow-md transition-shadow';
+                    userDiv.className = 'flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg';
                     
                     const statusBadge = user.isFirstLogin ? 
-                        '<span class="px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">Primeiro acesso pendente</span>' : 
-                        '<span class="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full">Senha alterada</span>';
-
-                    const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleDateString('pt-BR') : 'N/A';
-                    const clientName = user.name || 'Não informado';
+                        '<span class="px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">Primeiro acesso</span>' : 
+                        '<span class="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full">Ativo</span>';
 
                     userDiv.innerHTML = `
                         <div class="flex-1">
-                            <div class="flex items-center mb-2">
-                                <div>
-                                    <p class="font-semibold text-gray-800">${email}</p>
-                                    <p class="text-sm text-gray-600">${clientName}</p>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-2">
-                                <span><strong>Senha atual:</strong> <code class="bg-gray-200 px-2 py-1 rounded text-xs">${user.password}</code></span>
-                                <span><strong>Cadastrado em:</strong> ${createdAt}</span>
-                            </div>
+                            <p class="font-semibold text-gray-800">${user.email}</p>
+                            <p class="text-sm text-gray-600">Senha: ${user.password}</p>
                             ${statusBadge}
                         </div>
-                        <div class="flex flex-col space-y-2 ml-4">
-                            <button onclick="editUser('${email}')" class="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded border border-blue-300">
-                                Editar
-                            </button>
-                            <button onclick="resetPassword('${email}')" class="px-3 py-1 text-xs bg-orange-100 hover:bg-orange-200 text-orange-800 rounded border border-orange-300">
+                        <div class="flex space-x-2">
+                            <button onclick="resetUserPassword('${user.email}')" class="px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded">
                                 Reset
                             </button>
-                            <button onclick="removeUser('${email}')" class="px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded border border-red-300">
+                            <button onclick="removeUser('${user.email}')" class="px-3 py-1 text-xs bg-red-100 text-red-800 rounded">
                                 Remover
                             </button>
                         </div>
@@ -727,13 +358,16 @@
                     
                     usersList.appendChild(userDiv);
                 });
+
+                totalCount.textContent = count;
+
             } catch (error) {
                 console.error('Erro ao carregar usuários:', error);
                 showMessage('Erro ao carregar usuários: ' + error.message, 'error');
             }
         }
 
-        // Adicionar usuário
+        // Add user
         document.getElementById('addUserForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -745,29 +379,44 @@
                 return;
             }
 
+            if (!isFirebaseReady) {
+                showMessage('Firebase não disponível - modo offline.', 'error');
+                return;
+            }
+
             try {
-                const result = await firebaseUserManager.addUser({
+                const userDocId = email.replace(/[.]/g, '_');
+                const userData = {
                     email: email,
                     password: password,
                     name: '',
+                    isFirstLogin: true,
+                    createdAt: new Date().toISOString(),
                     createdBy: AUTHORIZED_ADMIN
+                };
+
+                await db.collection('portfolio_users').doc(userDocId).set(userData);
+                
+                // Log activity
+                await db.collection('system_logs').add({
+                    action: 'user_added',
+                    userEmail: email,
+                    details: { action: 'Usuário adicionado' },
+                    timestamp: new Date().toISOString(),
+                    adminEmail: AUTHORIZED_ADMIN
                 });
 
-                if (result.success) {
-                    document.getElementById('addUserForm').reset();
-                    showMessage(`Cliente ${email} adicionado!`, 'success');
-                    await loadUsers();
-                    await loadDashboardStats();
-                } else {
-                    showMessage('Erro ao adicionar cliente: ' + result.error, 'error');
-                }
+                document.getElementById('addUserForm').reset();
+                showMessage(`Cliente ${email} adicionado!`, 'success');
+                await loadUsers();
+
             } catch (error) {
                 console.error('Erro ao adicionar usuário:', error);
                 showMessage('Erro ao adicionar cliente: ' + error.message, 'error');
             }
         });
 
-        // Gerar senha
+        // Generate password
         document.getElementById('generatePassword').addEventListener('click', function() {
             const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
             let password = '';
@@ -777,30 +426,14 @@
             document.getElementById('initialPassword').value = password;
         });
 
-        // Funções globais - FUNCIONANDO
-        window.editUser = async function(email) {
-            try {
-                const result = await firebaseUserManager.getUserByEmail(email);
-                if (!result.success) {
-                    showMessage('Erro ao buscar usuário: ' + result.error, 'error');
-                    return;
-                }
-
-                const user = result.user;
-                document.getElementById('editUserEmail').value = email;
-                document.getElementById('editUserName').value = user.name || '';
-                document.getElementById('editUserEmailField').value = email;
-                document.getElementById('editUserPassword').value = user.password;
-                document.getElementById('editUserStatus').value = user.isFirstLogin.toString();
-                document.getElementById('editUserModal').classList.add('show');
-            } catch (error) {
-                console.error('Erro ao editar usuário:', error);
-                showMessage('Erro ao carregar dados do usuário: ' + error.message, 'error');
-            }
-        }
-
-        window.resetPassword = async function(email) {
+        // Global functions
+        window.resetUserPassword = async function(email) {
             if (!confirm(`Resetar senha do cliente ${email}?`)) return;
+            
+            if (!isFirebaseReady) {
+                showMessage('Firebase não disponível.', 'error');
+                return;
+            }
             
             try {
                 const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -809,15 +442,15 @@
                     newPassword += charset.charAt(Math.floor(Math.random() * charset.length));
                 }
 
-                const result = await firebaseUserManager.changeUserPassword(email, newPassword, true);
-                
-                if (result.success) {
-                    showMessage(`Senha resetada para ${email}. Nova senha: ${newPassword}`, 'success');
-                    await loadUsers();
-                    await loadDashboardStats();
-                } else {
-                    showMessage('Erro ao resetar senha: ' + result.error, 'error');
-                }
+                const userDocId = email.replace(/[.]/g, '_');
+                await db.collection('portfolio_users').doc(userDocId).update({
+                    password: newPassword,
+                    isFirstLogin: true,
+                    updatedAt: new Date().toISOString()
+                });
+
+                showMessage(`Senha resetada para ${email}. Nova senha: ${newPassword}`, 'success');
+                await loadUsers();
             } catch (error) {
                 console.error('Erro ao resetar senha:', error);
                 showMessage('Erro ao resetar senha: ' + error.message, 'error');
@@ -827,196 +460,31 @@
         window.removeUser = async function(email) {
             if (!confirm(`Remover cliente ${email}?`)) return;
             
+            if (!isFirebaseReady) {
+                showMessage('Firebase não disponível.', 'error');
+                return;
+            }
+            
             try {
-                const result = await firebaseUserManager.deleteUser(email);
+                const userDocId = email.replace(/[.]/g, '_');
+                await db.collection('portfolio_users').doc(userDocId).delete();
                 
-                if (result.success) {
-                    showMessage(`Cliente ${email} removido.`, 'success');
-                    await loadUsers();
-                    await loadDashboardStats();
-                } else {
-                    showMessage('Erro ao remover cliente: ' + result.error, 'error');
-                }
+                showMessage(`Cliente ${email} removido.`, 'success');
+                await loadUsers();
             } catch (error) {
                 console.error('Erro ao remover usuário:', error);
                 showMessage('Erro ao remover cliente: ' + error.message, 'error');
             }
         }
 
-        // Modal editar usuário - FUNCIONANDO com edição de email
-        document.getElementById('editUserForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const originalEmail = document.getElementById('editUserEmail').value;
-            const newEmail = document.getElementById('editUserEmailField').value.trim().toLowerCase();
-            const name = document.getElementById('editUserName').value;
-            const password = document.getElementById('editUserPassword').value;
-            const isFirstLogin = document.getElementById('editUserStatus').value === 'true';
-
-            if (!newEmail) {
-                showMessage('O campo de e-mail não pode estar vazio.', 'error');
-                return;
-            }
-
-            try {
-                // Se o email mudou, verificar se o novo email já existe
-                if (originalEmail !== newEmail) {
-                    const existingResult = await firebaseUserManager.getUserByEmail(newEmail);
-                    if (existingResult.success) {
-                        showMessage('Este e-mail já está em uso por outro cliente.', 'error');
-                        return;
-                    }
-                }
-
-                const updateData = {
-                    name: name,
-                    password: password,
-                    isFirstLogin: isFirstLogin
-                };
-
-                // Se o email mudou, criar novo documento e deletar o antigo
-                if (originalEmail !== newEmail) {
-                    // Buscar dados do usuário original
-                    const originalResult = await firebaseUserManager.getUserByEmail(originalEmail);
-                    if (!originalResult.success) {
-                        showMessage('Erro: Usuário original não encontrado.', 'error');
-                        return;
-                    }
-
-                    // Criar novo usuário com email atualizado
-                    const newUserData = {
-                        ...originalResult.user,
-                        ...updateData,
-                        email: newEmail
-                    };
-
-                    const addResult = await firebaseUserManager.addUser(newUserData);
-                    if (addResult.success) {
-                        // Deletar usuário antigo
-                        await firebaseUserManager.deleteUser(originalEmail);
-                    } else {
-                        showMessage('Erro ao criar usuário com novo email: ' + addResult.error, 'error');
-                        return;
-                    }
-                } else {
-                    // Apenas atualizar dados existentes
-                    const updateResult = await firebaseUserManager.updateUser(originalEmail, updateData);
-                    if (!updateResult.success) {
-                        showMessage('Erro ao atualizar usuário: ' + updateResult.error, 'error');
-                        return;
-                    }
-                }
-
-                document.getElementById('editUserModal').classList.remove('show');
-                showMessage(`Cliente ${newEmail} atualizado com sucesso!`, 'success');
-                await loadUsers();
-                await loadDashboardStats();
-            } catch (error) {
-                console.error('Erro ao editar usuário:', error);
-                showMessage('Erro ao atualizar cliente: ' + error.message, 'error');
-            }
-        });
-
-        // Fechar modais
-        document.getElementById('closeEditModal').addEventListener('click', () => {
-            document.getElementById('editUserModal').classList.remove('show');
-        });
-        document.getElementById('cancelEdit').addEventListener('click', () => {
-            document.getElementById('editUserModal').classList.remove('show');
-        });
-
-        // Alterar senha admin - FUNCIONANDO
-        document.getElementById('changeAdminPassword').addEventListener('click', () => {
-            document.getElementById('changePasswordModal').classList.add('show');
-        });
-
-        document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const current = document.getElementById('currentPassword').value;
-            const newPass = document.getElementById('newPassword').value;
-            const confirm = document.getElementById('confirmPassword').value;
-
-            if (current !== currentAdminSettings.adminPassword) {
-                showMessage('Senha atual incorreta.', 'error');
-                return;
-            }
-
-            if (newPass !== confirm) {
-                showMessage('As senhas não coincidem.', 'error');
-                return;
-            }
-
-            if (newPass.length < 6) {
-                showMessage('A nova senha deve ter pelo menos 6 caracteres.', 'error');
-                return;
-            }
-
-            try {
-                const result = await firebaseUserManager.updateAdminSettings({
-                    adminPassword: newPass
-                });
-
-                if (result.success) {
-                    currentAdminSettings.adminPassword = newPass;
-                    document.getElementById('changePasswordModal').classList.remove('show');
-                    document.getElementById('changePasswordForm').reset();
-                    showMessage('Senha administrativa alterada!', 'success');
-                } else {
-                    showMessage('Erro ao alterar senha: ' + result.error, 'error');
-                }
-            } catch (error) {
-                console.error('Erro ao alterar senha admin:', error);
-                showMessage('Erro ao alterar senha: ' + error.message, 'error');
-            }
-        });
-
-        document.getElementById('closePasswordModal').addEventListener('click', () => {
-            document.getElementById('changePasswordModal').classList.remove('show');
-        });
-        document.getElementById('cancelPasswordChange').addEventListener('click', () => {
-            document.getElementById('changePasswordModal').classList.remove('show');
-        });
-
-        // Backup
-        document.getElementById('backupData').addEventListener('click', async function() {
-            try {
-                const result = await firebaseUserManager.backupData();
-                
-                if (result.success) {
-                    const dataStr = JSON.stringify(result.data, null, 2);
-                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-                    const url = URL.createObjectURL(dataBlob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
-                    link.click();
-                    showMessage('Backup realizado!', 'success');
-                } else {
-                    showMessage('Erro ao fazer backup: ' + result.error, 'error');
-                }
-            } catch (error) {
-                console.error('Erro ao fazer backup:', error);
-                showMessage('Erro ao fazer backup: ' + error.message, 'error');
-            }
-        });
-
-        // Clear logs
-        document.getElementById('clearLogs').addEventListener('click', function() {
-            if (confirm('Limpar todos os logs?')) {
-                // Implementar limpeza de logs no Firebase se necessário
-                showMessage('Logs limpos!', 'success');
-            }
-        });
-
         // Logout
         document.getElementById('adminLogout').addEventListener('click', function() {
             if (confirm('Sair do painel administrativo?')) {
-                sessionStorage.clear();
                 location.reload();
             }
         });
 
+        // Show messages
         function showMessage(message, type) {
             const messageDiv = document.getElementById('adminMessage');
             messageDiv.textContent = message;
@@ -1033,34 +501,29 @@
             }, 5000);
         }
 
-        function showError(message) {
-            adminErrorMessage.textContent = message;
-            adminErrorMessage.classList.remove('hidden');
+        function showAdminError(message) {
+            const errorDiv = document.getElementById('adminErrorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
             setTimeout(() => {
-                adminErrorMessage.classList.add('hidden');
-            }, 8000);
+                errorDiv.classList.add('hidden');
+            }, 5000);
         }
 
-        // Verificar autenticação existente
-        function checkExistingAuth() {
-            if (sessionStorage.getItem('adminAuthenticated') === 'true') {
-                const adminUser = sessionStorage.getItem('adminUser');
-                if (adminUser && adminUser.toLowerCase() === AUTHORIZED_ADMIN.toLowerCase()) {
-                    showAdminPanel(adminUser);
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            console.log('Admin page loaded');
+            
+            setTimeout(() => {
+                if (typeof firebase !== 'undefined') {
+                    initializeFirebase();
                 } else {
-                    sessionStorage.clear();
+                    console.error('Firebase SDK não carregado');
+                    updateLoadingText('Erro ao carregar Firebase - modo offline');
+                    showAdminLogin();
                 }
-            }
-
-            checkLockout();
-            if (loginAttempts > 0 && loginAttempts < MAX_LOGIN_ATTEMPTS) {
-                attemptText.textContent = `Tentativas restantes: ${MAX_LOGIN_ATTEMPTS - loginAttempts}`;
-                loginAttemptsDiv.classList.remove('hidden');
-            }
-        }
-
-        // Inicializar aplicação
-        initializeApp();
+            }, 1000);
+        });
     </script>
 </body>
 </html>
