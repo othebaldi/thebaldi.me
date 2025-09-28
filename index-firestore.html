@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projeto ESESP - ENGECON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900">
+    <div class="fixed inset-0 bg-cover bg-center" style="background-image: url('assets/fundo-login.jpg');"></div>
+    <div class="fixed inset-0 bg-black/60"></div>
+    
+    <div class="relative min-h-screen flex flex-col items-center justify-center text-white text-center p-4">
+        <img src="assets/logo-engecon.png" alt="Logo Engecon" class="h-16 mb-6 animate-pulse">
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight">PROJETO ESESP</h1>
+        <p class="mt-2 text-lg max-w-2xl">Projeto de Urbanismo, Paisagismo e Sinalização do Estacionamento</p>
+    </div>
+
+    <script type="module">
+
+// Importar Firebase Firestore Manager
+import firestoreManager from './firebase-config.js';
+
+async function checkAuth() {
+    try {
+        const session = await firestoreManager.getUserSession();
+        if (session && session.isAuthenticated) {
+            // Usuário está logado, mostrar opção de ir para portfolio
+            const user = document.getElementById('loggedUser');
+            if (user) {
+                user.textContent = session.email;
+                user.style.display = 'block';
+            }
+
+            const loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) {
+                loginBtn.textContent = 'Ir para Portfolio';
+                loginBtn.onclick = () => window.location.href = 'portfolio.html';
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+    }
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+
+    // Verificar se existe botão de login
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn && loginBtn.onclick === null) {
+        loginBtn.onclick = () => window.location.href = 'login.html';
+    }
+});
+
+</script>
+</body>
+</html>
+

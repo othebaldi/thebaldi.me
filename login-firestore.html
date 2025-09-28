@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Portfólio Arquitetura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .login-bg {
+            background-image: url('assets/fundo-login.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body class="login-bg min-h-screen flex items-center justify-center">
+    <!-- Overlay escuro para melhor legibilidade -->
+    <div class="absolute inset-0 bg-black/50"></div>
+
+    <!-- Container do formulário de login -->
+    <div class="relative z-10 bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Acesso ao Portfólio</h1>
+            <p class="text-gray-600">Faça login para visualizar os projetos</p>
+        </div>
+
+        <!-- Formulário de Login -->
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    required 
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[rgb(255,165,44)] focus:border-transparent transition duration-200"
+                    placeholder="seu.email@exemplo.com"
+                >
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required 
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[rgb(255,165,44)] focus:border-transparent transition duration-200"
+                    placeholder="Digite sua senha"
+                >
+            </div>
+
+            <button 
+                type="submit" 
+                class="w-full bg-[rgb(255,165,44)] hover:bg-[rgb(230,149,40)] text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
+            >
+                Entrar
+            </button>
+        </form>
+
+        <!-- Mensagem de erro -->
+        <div id="errorMessage" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm"></div>
+    </div>
+
+    <script type="module">
+
+// Importar Firebase Firestore Manager
+import firestoreManager from './firebase-config.js';
+
+// Função para verificar se é o primeiro login
+async function checkAuth() {
+    try {
+        const session = await firestoreManager.getUserSession();
+        if (session && session.isAuthenticated) {
+            // Usuário está logado, redirecionar para portfolio
+            window.location.href = 'portfolio.html';
+            return;
+        }
+    } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+    }
+}
+
+async function handleLogin() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    const messageDiv = document.getElementById('message');
+
+    if (!email || !password) {
+        showMessage('Preencha todos os campos', 'error');
+        return;
+    }
+
+    try {
+        // Buscar usuários do Firestore
+        const users = await firestoreManager.getUsers();
+
+        // Se não houver usuários, criar usuários padrão
+        if (Object.keys(users).length === 0) {
+            console.log('Criando usuários padrão...');
+            const defaultUsers = {
+                'cliente1@example.com': {
+                    name: 'Cliente 1',
+                    password: 'senha123',
+                    isFirstLogin: true,
+                    createdAt: new Date().toISOString()
+                },
+                'cliente2@example.com': {
+                    name: 'Cliente 2', 
+                    password: 'senha456',
+                    isFirstLogin: true,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+            await firestoreManager.saveUsers(defaultUsers);
+            Object.assign(users, defaultUsers);
+        }
+
+        const user = users[email];
+
+        if (user && user.password === password) {
+            // Login bem-sucedido
+            await firestoreManager.setUserSession(email, true);
+
+            if (user.isFirstLogin) {
+                // Primeiro login - redirecionar para mudança de senha
+                showMessage('Primeiro acesso detectado. Redirecionando para alteração de senha...', 'info');
+                setTimeout(() => {
+                    window.location.href = 'change-password.html';
+                }, 2000);
+            } else {
+                // Login normal
+                showMessage('Login realizado com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'portfolio.html';
+                }, 1500);
+            }
+        } else {
+            showMessage('Email ou senha incorretos', 'error');
+        }
+    } catch (error) {
+        console.error('Erro durante login:', error);
+        showMessage('Erro interno. Tente novamente.', 'error');
+    }
+}
+
+function showMessage(message, type) {
+    const messageDiv = document.getElementById('message');
+    messageDiv.textContent = message;
+    messageDiv.className = `message ${type}`;
+    messageDiv.style.display = 'block';
+
+    setTimeout(() => {
+        messageDiv.style.display = 'none';
+    }, 5000);
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth(); // Verificar se já está logado
+
+    document.getElementById('loginBtn')?.addEventListener('click', handleLogin);
+
+    // Allow enter key to submit
+    document.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleLogin();
+        }
+    });
+});
+
+</script>
+</body>
+</html>
+
