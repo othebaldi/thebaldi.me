@@ -97,6 +97,12 @@
         let app, db, isFirebaseReady = false;
         let initTimeout;
 
+        function navigateToPage(page) {
+            const currentPath = window.location.pathname;
+            const newPath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1) + page;
+            window.location.href = newPath;
+        }
+
         // Update status functions
         function updateLoadingText(text) {
             document.getElementById('loadingText').textContent = text;
@@ -195,7 +201,7 @@
                 // Check if already authenticated
                 if (sessionStorage.getItem('isAuthenticated') === 'true') {
                     updateLoadingText('Usuário já autenticado...');
-                    window.location.href = 'portfolio.html';
+                    navigateToPage('portfolio.html');
                     return;
                 }
 
@@ -334,7 +340,7 @@
 
                 // Admin redirect
                 if (email === 'compras.thebaldi@gmail.com') {
-                    window.location.href = 'admin.html';
+                    navigateToPage('admin.html');
                     return;
                 }
 
@@ -365,9 +371,9 @@
                         }
 
                         if (result.isFirstLogin) {
-                            window.location.href = 'change-password.html';
+                            navigateToPage('change-password.html');
                         } else {
-                            window.location.href = 'portfolio.html';
+                            navigateToPage('portfolio.html');
                         }
                     } else {
                         showError(result.message);
@@ -422,3 +428,4 @@
     </script>
 </body>
 </html>
+

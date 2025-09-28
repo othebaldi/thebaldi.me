@@ -438,9 +438,14 @@
             // Get admin settings from Firebase if available
             if (isFirebaseReady) {
                 try {
-                    const adminDoc = await db.collection('admin_settings').doc('main').get();
+                    const adminDocRef = db.collection('admin_settings').doc('main');
+                    const adminDoc = await adminDocRef.get();
                     if (adminDoc.exists) {
                         currentAdminSettings = adminDoc.data();
+                    } else {
+                        // If doc doesn't exist, create it with default values
+                        console.log("Criando documento de configurações do admin padrão.");
+                        await adminDocRef.set(currentAdminSettings);
                     }
                 } catch (error) {
                     console.log('Usando configurações padrão:', error);
@@ -769,14 +774,17 @@
             }
 
             try {
-                const updateData = {
-                    updatedAt: new Date().toISOString()
-                };
+                const updateData = {};
 
                 if (newEmail) updateData.adminEmail = newEmail;
                 if (newPassword) updateData.adminPassword = newPassword;
+                
+                if(Object.keys(updateData).length > 0){
+                    updateData.updatedAt = new Date().toISOString();
+                    // Use set com merge:true para criar se não existir, ou atualizar se existir.
+                    await db.collection('admin_settings').doc('main').set(updateData, { merge: true });
+                }
 
-                await db.collection('admin_settings').doc('main').update(updateData);
                 
                 // Update current settings
                 currentAdminSettings = { ...currentAdminSettings, ...updateData };

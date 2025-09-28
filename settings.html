@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações da Conta - Portfólio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK v8 -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .form-container {
+            transition: all 0.3s ease;
+        }
+        .form-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+    
+    <!-- Fundo Fixo -->
+    <div class="fixed inset-0 z-0">
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('assets/fundo-login.jpg');"></div>
+        <div class="absolute inset-0 bg-black/60"></div>
+    </div>
+
+    <!-- Container de Conteúdo Rolável -->
+    <div class="relative z-10 min-h-screen flex items-start justify-center p-4 sm:py-12">
+        <!-- Container principal -->
+        <div id="settingsContainer" class="bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-lg">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">Configurações da Conta</h1>
+                <p class="text-gray-600">Altere seu nome de usuário ou sua senha.</p>
+                <p id="currentUserEmail" class="text-sm text-blue-600 font-medium mt-1"></p>
+            </div>
+
+            <!-- Mensagem de feedback global -->
+            <div id="globalMessage" class="hidden mb-6 p-3 rounded-lg text-sm text-center"></div>
+
+            <!-- Seção de Alterar Nome -->
+            <div class="form-container mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Alterar Nome</h2>
+                <form id="changeNameForm" class="space-y-4">
+                    <div>
+                        <label for="userName" class="block text-sm font-medium text-gray-700 mb-2">Novo Nome</label>
+                        <input type="text" id="userName" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                               placeholder="Digite seu nome completo">
+                    </div>
+                    <div>
+                        <label for="currentPasswordForName" class="block text-sm font-medium text-gray-700 mb-2">Senha Atual (para confirmar)</label>
+                        <input type="password" id="currentPasswordForName" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                               placeholder="••••••••">
+                    </div>
+                    <button type="submit" id="changeNameBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Salvar Nome</button>
+                </form>
+            </div>
+
+            <!-- Seção de Alterar Senha -->
+            <div class="form-container p-6 bg-gray-50 border border-gray-200 rounded-lg">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Alterar Senha</h2>
+                <form id="changePasswordForm" class="space-y-4">
+                    <div>
+                        <label for="currentPasswordForPass" class="block text-sm font-medium text-gray-700 mb-2">Senha Atual</label>
+                        <input type="password" id="currentPasswordForPass" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" 
+                               placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">Nova Senha</label>
+                        <input type="password" id="newPassword" required minlength="6"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" 
+                               placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <div>
+                        <label for="confirmNewPassword" class="block text-sm font-medium text-gray-700 mb-2">Confirmar Nova Senha</label>
+                        <input type="password" id="confirmNewPassword" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" 
+                               placeholder="Repita a nova senha">
+                    </div>
+                    <button type="submit" id="changePasswordBtn" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium">Salvar Senha</button>
+                </form>
+            </div>
+
+            <div class="mt-8 text-center">
+                <a href="./portfolio.html" class="text-sm text-gray-600 hover:text-gray-900 underline">Voltar ao Portfólio</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWVI9VHvxARMSM3JV-bXs_73UjKh25mn4",
+            authDomain: "thebaldi-me.firebaseapp.com",
+            projectId: "thebaldi-me",
+            storageBucket: "thebaldi-me.firebasestorage.app",
+            messagingSenderId: "794996190135",
+            appId: "1:794996190135:web:444f87525f52d79c7d5632"
+        };
+
+        let app, db;
+        let loggedUserEmail = null;
+        let currentUserData = null;
+
+        function navigateToPage(page) {
+            const currentPath = window.location.pathname;
+            const newPath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1) + page;
+            window.location.href = newPath;
+        }
+
+        function showMessage(message, type = 'error', duration = 5000) {
+            const messageDiv = document.getElementById('globalMessage');
+            messageDiv.textContent = message;
+            messageDiv.className = 'mb-6 p-3 rounded-lg text-sm text-center';
+            
+            if (type === 'error') {
+                messageDiv.classList.add('bg-red-100', 'text-red-700');
+            } else if (type === 'success') {
+                messageDiv.classList.add('bg-green-100', 'text-green-700');
+            }
+            messageDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageDiv.classList.add('hidden');
+            }, duration);
+        }
+
+        async function initializeApp() {
+            try {
+                const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
+                loggedUserEmail = sessionStorage.getItem('loggedInUser');
+
+                if (!isAuthenticated || !loggedUserEmail) {
+                    navigateToPage('login.html');
+                    return;
+                }
+
+                document.getElementById('currentUserEmail').textContent = loggedUserEmail;
+
+                app = firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+
+                const userDocId = loggedUserEmail.replace(/[.]/g, '_');
+                const userDoc = await db.collection('portfolio_users').doc(userDocId).get();
+
+                if (!userDoc.exists) {
+                    showMessage('Erro: Usuário não encontrado.');
+                    setTimeout(() => {
+                        sessionStorage.clear();
+                        navigateToPage('login.html');
+                    }, 2000);
+                    return;
+                }
+                
+                currentUserData = userDoc.data();
+                document.getElementById('userName').value = currentUserData.name || '';
+
+            } catch (error) {
+                console.error("Erro na inicialização:", error);
+                showMessage('Não foi possível conectar ao banco de dados. Tente novamente mais tarde.');
+            }
+        }
+
+        document.getElementById('changeNameForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const changeNameBtn = document.getElementById('changeNameBtn');
+            const newName = document.getElementById('userName').value.trim();
+            const currentPassword = document.getElementById('currentPasswordForName').value;
+            
+            if (!newName) {
+                showMessage('Por favor, insira um nome.');
+                return;
+            }
+
+            if (currentUserData.password !== currentPassword) {
+                showMessage('Senha atual incorreta.');
+                return;
+            }
+
+            changeNameBtn.disabled = true;
+            changeNameBtn.textContent = 'Salvando...';
+
+            try {
+                const userDocId = loggedUserEmail.replace(/[.]/g, '_');
+                await db.collection('portfolio_users').doc(userDocId).update({
+                    name: newName,
+                    updatedAt: new Date().toISOString()
+                });
+
+                // Atualiza os dados locais
+                currentUserData.name = newName;
+                document.getElementById('currentPasswordForName').value = '';
+                showMessage('Nome alterado com sucesso!', 'success');
+            } catch (error) {
+                console.error("Erro ao alterar nome:", error);
+                showMessage('Ocorreu um erro ao alterar o nome.');
+            } finally {
+                changeNameBtn.disabled = false;
+                changeNameBtn.textContent = 'Salvar Nome';
+            }
+        });
+
+        document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const changePasswordBtn = document.getElementById('changePasswordBtn');
+
+            const currentPassword = document.getElementById('currentPasswordForPass').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+            if (newPassword.length < 6) {
+                showMessage('A nova senha deve ter no mínimo 6 caracteres.');
+                return;
+            }
+
+            if (newPassword !== confirmNewPassword) {
+                showMessage('As novas senhas não coincidem.');
+                return;
+            }
+
+            if (currentUserData.password !== currentPassword) {
+                showMessage('Senha atual incorreta.');
+                return;
+            }
+            
+            if (currentUserData.password === newPassword) {
+                showMessage('A nova senha não pode ser igual à senha atual.');
+                return;
+            }
+
+            changePasswordBtn.disabled = true;
+            changePasswordBtn.textContent = 'Salvando...';
+
+            try {
+                const userDocId = loggedUserEmail.replace(/[.]/g, '_');
+                await db.collection('portfolio_users').doc(userDocId).update({
+                    password: newPassword,
+                    updatedAt: new Date().toISOString()
+                });
+                
+                // Atualiza os dados locais
+                currentUserData.password = newPassword;
+                document.getElementById('changePasswordForm').reset();
+                showMessage('Senha alterada com sucesso!', 'success');
+
+            } catch (error) {
+                console.error("Erro ao alterar senha:", error);
+                showMessage('Ocorreu um erro ao alterar a senha.');
+            } finally {
+                changePasswordBtn.disabled = false;
+                changePasswordBtn.textContent = 'Salvar Senha';
+            }
+        });
+
+
+        window.addEventListener('load', initializeApp);
+    </script>
+</body>
+</html>
+

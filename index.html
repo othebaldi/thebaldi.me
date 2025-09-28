@@ -22,26 +22,16 @@
 
     <script>
         function navigateTo(page) {
-            // Cria um link temporário para navegar, uma abordagem mais robusta para ambientes restritos.
-            const link = document.createElement('a');
-            link.href = page;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const currentPath = window.location.pathname;
+            const newPath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1) + page;
+            window.location.href = newPath;
         }
 
         setTimeout(() => {
             const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
-            const loggedUser = sessionStorage.getItem('loggedInUser');
 
-            if (isAuthenticated && loggedUser) {
-                const users = JSON.parse(localStorage.getItem('portfolioUsers')) || {};
-                const user = users[loggedUser];
-                if (user && user.isFirstLogin) {
-                    navigateTo('change-password.html');
-                } else {
-                    navigateTo('portfolio.html');
-                }
+            if (isAuthenticated) {
+                navigateTo('portfolio.html');
             } else {
                 navigateTo('login.html');
             }
