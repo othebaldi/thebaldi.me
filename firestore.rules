@@ -1,0 +1,30 @@
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Coleção de usuários do portfólio
+    match /portfolio_users/{userId} {
+      // Permitir leitura e escrita apenas para administradores autenticados
+      // Ou implementar autenticação Firebase Auth se necessário
+      allow read, write: if true; // Temporariamente aberto - ajustar conforme necessário
+    }
+    
+    // Coleção de configurações administrativas
+    match /admin_settings/{document} {
+      // Apenas administradores podem acessar
+      allow read, write: if true; // Temporariamente aberto - ajustar conforme necessário  
+    }
+    
+    // Coleção de logs do sistema
+    match /system_logs/{logId} {
+      // Permitir apenas escrita (para logs) e leitura para admins
+      allow create: if true;
+      allow read: if true; // Temporariamente aberto - ajustar conforme necessário
+    }
+    
+    // Bloquear acesso a todas as outras coleções
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

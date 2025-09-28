@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Portfólio Arquitetura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .login-bg {
+            background-image: url('assets/fundo-login.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body class="login-bg min-h-screen flex items-center justify-center">
+    
+    <!-- Overlay escuro para melhor legibilidade -->
+    <div class="absolute inset-0 bg-black/50"></div>
+    
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="relative z-10 bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-full mb-4">
+            <svg class="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Inicializando</h1>
+        <p class="text-gray-600">Conectando com o Firebase...</p>
+    </div>
+    
+    <!-- Container do formulário de login -->
+    <div id="loginContainer" class="relative z-10 bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 hidden">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Acesso ao Portfólio</h1>
+            <p class="text-gray-600">Faça login para visualizar os projetos</p>
+        </div>
+
+        <!-- Formulário de Login -->
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+                <input type="email" id="email" name="email" required 
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rgb(255,165,44) focus:border-transparent transition duration-200" 
+                       placeholder="seu.email@exemplo.com">
+            </div>
+            
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                <input type="password" id="password" name="password" required 
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rgb(255,165,44) focus:border-transparent transition duration-200" 
+                       placeholder="Digite sua senha">
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-rgb(255,165,44) hover:bg-rgb(230,149,40) text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                Entrar
+            </button>
+        </form>
+
+        <!-- Mensagem de erro -->
+        <div id="errorMessage" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm"></div>
+    </div>
+
+    <!-- Firebase Integration -->
+    <script type="module">
+        import { firebaseUserManager } from './firebase-utils.js';
+
+        // Elementos DOM
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loginContainer = document.getElementById('loginContainer');
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Inicializar aplicação
+        async function initializeApp() {
+            try {
+                // Se o usuário já estiver logado, redireciona para o portfólio
+                if (sessionStorage.getItem('isAuthenticated') === 'true') {
+                    window.location.pathname = '/portfolio.html';
+                    return;
+                }
+
+                // Esconder loading e mostrar formulário de login
+                loadingScreen.classList.add('hidden');
+                loginContainer.classList.remove('hidden');
+
+                // Inicializar usuários padrão se não houver nenhum (para compatibilidade)
+                await initializeDefaultUsers();
+
+            } catch (error) {
+                console.error('Erro ao inicializar:', error);
+                showError('Erro ao conectar com o Firebase: ' + error.message);
+                loadingScreen.classList.add('hidden');
+                loginContainer.classList.remove('hidden');
+            }
+        }
+
+        // Inicializar usuários de exemplo se não houver nenhum (compatibilidade)
+        async function initializeDefaultUsers() {
+            try {
+                const usersResult = await firebaseUserManager.getAllUsers();
+                
+                if (usersResult.success && Object.keys(usersResult.users).length === 0) {
+                    // Adicionar usuários padrão para compatibilidade
+                    const defaultUsers = [
+                        {
+                            email: 'cliente1@email.com',
+                            password: '555222',
+                            name: 'Cliente Um',
+                            isFirstLogin: false
+                        },
+                        {
+                            email: 'cliente2@email.com', 
+                            password: 'abc123',
+                            name: 'Cliente Dois',
+                            isFirstLogin: true
+                        },
+                        {
+                            email: 'exemplo@email.com',
+                            password: '987654', 
+                            name: 'Cliente Exemplo',
+                            isFirstLogin: true
+                        }
+                    ];
+
+                    for (const user of defaultUsers) {
+                        await firebaseUserManager.addUser(user);
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao inicializar usuários padrão:', error);
+                // Não bloqueia o login se falhar
+            }
+        }
+
+        // Função para autenticar o usuário
+        async function authenticateUser(email, password) {
+            try {
+                const result = await firebaseUserManager.getUserByEmail(email);
+                
+                if (!result.success) {
+                    return { success: false, message: 'Usuário não encontrado.' };
+                }
+
+                const user = result.user;
+                
+                if (user.password !== password) {
+                    return { success: false, message: 'Senha incorreta.' };
+                }
+
+                return { success: true, isFirstLogin: user.isFirstLogin };
+            } catch (error) {
+                console.error('Erro na autenticação:', error);
+                return { success: false, message: 'Erro interno do servidor.' };
+            }
+        }
+
+        // Manipulador do formulário
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                showError('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            // Lógica de login para admin
+            if (email.toLowerCase() === 'compras.thebaldi@gmail.com') {
+                window.location.pathname = '/admin.html';
+                return;
+            }
+
+            try {
+                const authResult = await authenticateUser(email, password);
+
+                if (authResult.success) {
+                    sessionStorage.setItem('isAuthenticated', 'true');
+                    sessionStorage.setItem('loggedInUser', email.toLowerCase());
+
+                    // Log da atividade de login
+                    await firebaseUserManager.logActivity('user_login', email, { 
+                        action: 'Login realizado',
+                        timestamp: new Date().toISOString()
+                    });
+
+                    if (authResult.isFirstLogin) {
+                        window.location.pathname = '/change-password.html';
+                    } else {
+                        window.location.pathname = '/portfolio.html';
+                    }
+                } else {
+                    showError(authResult.message);
+                }
+            } catch (error) {
+                console.error('Erro no login:', error);
+                showError('Erro interno. Tente novamente mais tarde.');
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Inicializar aplicação quando a página carregar
+        initializeApp();
+    </script>
+</body>
+</html>
