@@ -69,86 +69,115 @@
         <div id="errorMessage" class="hidden mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm"></div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Se o usuário já estiver logado, redireciona para o portfólio
-            if (sessionStorage.getItem('isAuthenticated') === 'true') {
-                window.location.pathname = 'portfolio.html';
-                return;
+    <script type="module">
+
+// Importar Firebase Firestore Manager
+import firestoreManager from './firebase-config.js';
+
+// Função para verificar se é o primeiro login
+async function checkAuth() {
+    try {
+        const session = await firestoreManager.getUserSession();
+        if (session && session.isAuthenticated) {
+            // Usuário está logado, redirecionar para portfolio
+            window.location.href = 'portfolio.html';
+            return;
+        }
+    } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+    }
+}
+
+async function handleLogin() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    const messageDiv = document.getElementById('message');
+
+    if (!email || !password) {
+        showMessage('Preencha todos os campos', 'error');
+        return;
+    }
+
+    try {
+        // Buscar usuários do Firestore
+        const users = await firestoreManager.getUsers();
+
+        // Se não houver usuários, criar usuários padrão
+        if (Object.keys(users).length === 0) {
+            console.log('Criando usuários padrão...');
+            const defaultUsers = {
+                'cliente1@example.com': {
+                    name: 'Cliente 1',
+                    password: 'senha123',
+                    isFirstLogin: true,
+                    createdAt: new Date().toISOString()
+                },
+                'cliente2@example.com': {
+                    name: 'Cliente 2', 
+                    password: 'senha456',
+                    isFirstLogin: true,
+                    createdAt: new Date().toISOString()
+                }
+            };
+
+            await firestoreManager.saveUsers(defaultUsers);
+            Object.assign(users, defaultUsers);
+        }
+
+        const user = users[email];
+
+        if (user && user.password === password) {
+            // Login bem-sucedido
+            await firestoreManager.setUserSession(email, true);
+
+            if (user.isFirstLogin) {
+                // Primeiro login - redirecionar para mudança de senha
+                showMessage('Primeiro acesso detectado. Redirecionando para alteração de senha...', 'info');
+                setTimeout(() => {
+                    window.location.href = 'change-password.html';
+                }, 2000);
+            } else {
+                // Login normal
+                showMessage('Login realizado com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'portfolio.html';
+                }, 1500);
             }
+        } else {
+            showMessage('Email ou senha incorretos', 'error');
+        }
+    } catch (error) {
+        console.error('Erro durante login:', error);
+        showMessage('Erro interno. Tente novamente.', 'error');
+    }
+}
 
-            // Inicializa usuários de exemplo se não houver nenhum
-            function initializeDefaultUsers() {
-                const users = localStorage.getItem('portfolioUsers');
-                if (!users) {
-                    const defaultUsers = {
-                        'cliente1@email.com': { password: '555222', isFirstLogin: false, name: 'Cliente Um', createdAt: new Date().toISOString() },
-                        'cliente2@email.com': { password: 'abc123', isFirstLogin: true, name: 'Cliente Dois', createdAt: new Date().toISOString() },
-                        'exemplo@email.com': { password: '987654', isFirstLogin: true, name: 'Cliente Exemplo', createdAt: new Date().toISOString() }
-                    };
-                    localStorage.setItem('portfolioUsers', JSON.stringify(defaultUsers));
-                }
-            }
-            initializeDefaultUsers();
+function showMessage(message, type) {
+    const messageDiv = document.getElementById('message');
+    messageDiv.textContent = message;
+    messageDiv.className = `message ${type}`;
+    messageDiv.style.display = 'block';
 
-            // Função para autenticar o usuário
-            function authenticateUser(email, password) {
-                const users = JSON.parse(localStorage.getItem('portfolioUsers')) || {};
-                const user = users[email.toLowerCase()];
+    setTimeout(() => {
+        messageDiv.style.display = 'none';
+    }, 5000);
+}
 
-                if (!user) {
-                    return { success: false, message: 'Usuário não encontrado.' };
-                }
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth(); // Verificar se já está logado
 
-                if (user.password !== password) {
-                    return { success: false, message: 'Senha incorreta.' };
-                }
+    document.getElementById('loginBtn')?.addEventListener('click', handleLogin);
 
-                return { success: true, isFirstLogin: user.isFirstLogin };
-            }
-            
-            // Manipulador do formulário
-            document.getElementById('loginForm').addEventListener('submit', function(e) {
-                e.preventDefault();
+    // Allow enter key to submit
+    document.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleLogin();
+        }
+    });
+});
 
-                const email = document.getElementById('email').value.trim();
-                const password = document.getElementById('password').value;
-
-                if (!email || !password) {
-                    showError('Por favor, preencha todos os campos.');
-                    return;
-                }
-
-                // Lógica de login para admin
-                if (email.toLowerCase() === 'compras.thebaldi@gmail.com') {
-                     window.location.pathname = 'admin.html';
-                     return;
-                }
-
-                const authResult = authenticateUser(email, password);
-
-                if (authResult.success) {
-                    sessionStorage.setItem('isAuthenticated', 'true');
-                    sessionStorage.setItem('loggedInUser', email.toLowerCase());
-
-                    if (authResult.isFirstLogin) {
-                        window.location.pathname = 'change-password.html';
-                    } else {
-                        window.location.pathname = 'portfolio.html';
-                    }
-                } else {
-                    showError(authResult.message);
-                }
-            });
-
-            function showError(message) {
-                const errorDiv = document.getElementById('errorMessage');
-                errorDiv.textContent = message;
-                errorDiv.classList.remove('hidden');
-                setTimeout(() => errorDiv.classList.add('hidden'), 5000);
-            }
-        });
-    </script>
+</script>
 </body>
 </html>
 

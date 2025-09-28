@@ -20,33 +20,45 @@
         <p class="mt-2 text-lg max-w-2xl">Projeto de Urbanismo, Paisagismo e Sinalização do Estacionamento</p>
     </div>
 
-    <script>
-        function navigateTo(page) {
-            // Cria um link temporário para navegar, uma abordagem mais robusta para ambientes restritos.
-            const link = document.createElement('a');
-            link.href = page;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+    <script type="module">
 
-        setTimeout(() => {
-            const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
-            const loggedUser = sessionStorage.getItem('loggedInUser');
+// Importar Firebase Firestore Manager
+import firestoreManager from './firebase-config.js';
 
-            if (isAuthenticated && loggedUser) {
-                const users = JSON.parse(localStorage.getItem('portfolioUsers')) || {};
-                const user = users[loggedUser];
-                if (user && user.isFirstLogin) {
-                    navigateTo('change-password.html');
-                } else {
-                    navigateTo('portfolio.html');
-                }
-            } else {
-                navigateTo('login.html');
+async function checkAuth() {
+    try {
+        const session = await firestoreManager.getUserSession();
+        if (session && session.isAuthenticated) {
+            // Usuário está logado, mostrar opção de ir para portfolio
+            const user = document.getElementById('loggedUser');
+            if (user) {
+                user.textContent = session.email;
+                user.style.display = 'block';
             }
-        }, 1500);
-    </script>
+
+            const loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) {
+                loginBtn.textContent = 'Ir para Portfolio';
+                loginBtn.onclick = () => window.location.href = 'portfolio.html';
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+    }
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+
+    // Verificar se existe botão de login
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn && loginBtn.onclick === null) {
+        loginBtn.onclick = () => window.location.href = 'login.html';
+    }
+});
+
+</script>
 </body>
 </html>
 

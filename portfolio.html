@@ -139,14 +139,59 @@
     </style>
 </head>
 <body class="text-gray-800">
-    <script>
-        const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
-        const loggedUser = sessionStorage.getItem('loggedInUser');
+    <script type="module">
 
-        if (!isAuthenticated || !loggedUser) {
-            window.location.pathname = 'login.html';
+// Importar Firebase Firestore Manager
+import firestoreManager from './firebase-config.js';
+
+let currentUser = null;
+
+async function checkAuth() {
+    try {
+        const session = await firestoreManager.getUserSession();
+        if (!session || !session.isAuthenticated || !session.email) {
+            // Não está logado, redirecionar para login
+            window.location.href = 'login.html';
+            return;
         }
-    </script>
+
+        currentUser = session.email;
+        const userElement = document.getElementById('userEmail');
+        if (userElement) {
+            userElement.textContent = currentUser;
+        }
+    } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        window.location.href = 'login.html';
+    }
+}
+
+async function logout() {
+    try {
+        await firestoreManager.clearUserSession();
+        window.location.href = 'login.html';
+    } catch (error) {
+        console.error('Erro ao fazer logout:', error);
+        // Mesmo com erro, redirecionar
+        window.location.href = 'login.html';
+    }
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+
+    // Adicionar event listener para botão de logout se existir
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+
+    // Disponibilizar função de logout globalmente
+    window.logout = logout;
+});
+
+</script>
 
     <div id="hero-background" class="fixed top-0 left-0 w-full h-full -z-10">
         <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('assets/render-01.jpg');"></div>
